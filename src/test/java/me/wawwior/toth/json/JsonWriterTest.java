@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.StringWriter;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class JsonWriterTest {
 
@@ -44,6 +45,27 @@ class JsonWriterTest {
         assertEquals(expected, stringWriter.toString());
     }
 
+    /**
+     * Utility method for creating tests.
+     *
+     * @param consumer the write operation
+     * @param expected the expected exception
+     */
+    void throwsTest(
+            ThrowingConsumer<JsonWriter> consumer,
+            String expected
+    ) {
+        StringWriter stringWriter = new StringWriter();
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> consumer.accept(new JsonWriter(
+                        stringWriter,
+                        JsonWriter.Style.compact()
+                ))
+        );
+        assertEquals(expected, exception.getMessage());
+    }
+
     interface ThrowingConsumer<T> {
         void accept(T t) throws IOException;
     }
@@ -53,6 +75,35 @@ class JsonWriterTest {
      */
     @Nested
     class ObjectTests {
+
+        @Test
+        void valueThrows() {
+
+            throwsTest(
+                    writer -> writer.openObject().value("value"),
+                    "State is EMPTY_OBJECT!"
+            );
+        }
+
+        @Test
+        void keyThrows() {
+
+            throwsTest(
+                    writer -> writer.openArray().key("key"),
+                    "State is EMPTY_ARRAY, expected OBJECT!"
+            );
+
+        }
+
+        @SuppressWarnings("Convert2MethodRef")
+        @Test
+        void closeThrows() {
+
+            throwsTest(
+                    writer -> writer.closeObject(),
+                    "State is NONE, cannot close object!"
+            );
+        }
 
         /**
          * ...with {@link JsonWriter.Style#compact()}.
@@ -85,12 +136,14 @@ class JsonWriterTest {
                 compactTest(
                         writer -> writer
                                 .openObject()
-                                .key("key")
+                                .key("foo")
+                                .value("value")
+                                .key("bar")
                                 .value("value")
                                 .closeObject(),
                         //language=JSON
                         """
-                        {"key":"value"}"""
+                        {"foo":"value","bar":"value"}"""
                 );
             }
 
@@ -170,13 +223,16 @@ class JsonWriterTest {
                 prettyTest(
                         writer -> writer
                                 .openObject()
-                                .key("key")
+                                .key("foo")
+                                .value("value")
+                                .key("bar")
                                 .value("value")
                                 .closeObject(),
                         //language=JSON
                         """
                         {
-                          "key": "value"
+                          "foo": "value",
+                          "bar": "value"
                         }"""
                 );
             }
@@ -239,6 +295,16 @@ class JsonWriterTest {
     @Nested
     class ArrayTests {
 
+        @SuppressWarnings("Convert2MethodRef")
+        @Test
+        void closeThrows() {
+
+            throwsTest(
+                    writer -> writer.closeArray(),
+                    "State is NONE, cannot close array!"
+            );
+        }
+
         @Nested
         class Compact {
 
@@ -265,10 +331,10 @@ class JsonWriterTest {
             @Test
             void basic() throws IOException {
                 compactTest(
-                        writer -> writer.openArray().value("value").closeArray(),
+                        writer -> writer.openArray().value("foo").value("bar").closeArray(),
                         //language=JSON
                         """
-                        ["value"]"""
+                        ["foo","bar"]"""
                 );
             }
 
@@ -332,11 +398,12 @@ class JsonWriterTest {
             @Test
             void basic() throws IOException {
                 prettyTest(
-                        writer -> writer.openArray().value("value").closeArray(),
+                        writer -> writer.openArray().value("foo").value("bar").closeArray(),
                         //language=JSON
                         """
                         [
-                          "value"
+                          "foo",
+                          "bar"
                         ]"""
                 );
             }
