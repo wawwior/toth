@@ -6,7 +6,7 @@ import java.util.List;
 
 public class JsonArray implements JsonElement {
 
-    private List<JsonElement> elements = new ArrayList<>();
+    private final List<JsonElement> elements = new ArrayList<>();
 
     public JsonElement get(int index) {
         return elements.get(index);
