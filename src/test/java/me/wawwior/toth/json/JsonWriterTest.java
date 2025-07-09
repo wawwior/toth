@@ -10,10 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class JsonWriterTest {
 
-    interface ThrowingConsumer<T> {
-        void accept(T t) throws IOException;
-    }
-
     /**
      * Utility method for creating tests.
      *
@@ -21,7 +17,8 @@ class JsonWriterTest {
      * @param expected the expected result
      * @throws IOException If this happens, the test fails.
      */
-    void compactTest(ThrowingConsumer<JsonWriter> consumer, String expected) throws IOException {
+    void compactTest(ThrowingConsumer<JsonWriter> consumer, String expected)
+            throws IOException {
 
         StringWriter stringWriter = new StringWriter();
         consumer.accept(new JsonWriter(stringWriter, JsonWriter.Style.compact()));
@@ -38,12 +35,17 @@ class JsonWriterTest {
      * @param expected the expected result
      * @throws IOException If this happens, the test fails.
      */
-    void prettyTest(ThrowingConsumer<JsonWriter> consumer, String expected) throws IOException {
+    void prettyTest(ThrowingConsumer<JsonWriter> consumer, String expected)
+            throws IOException {
 
         StringWriter stringWriter = new StringWriter();
         consumer.accept(new JsonWriter(stringWriter, JsonWriter.Style.pretty("  ")));
 
         assertEquals(expected, stringWriter.toString());
+    }
+
+    interface ThrowingConsumer<T> {
+        void accept(T t) throws IOException;
     }
 
     /**
@@ -65,10 +67,12 @@ class JsonWriterTest {
              */
             @Test
             void empty() throws IOException {
-                compactTest(writer -> writer.openObject().closeObject(),
+                compactTest(
+                        writer -> writer.openObject().closeObject(),
                         //language=JSON
                         """
-                        {}""");
+                        {}"""
+                );
             }
 
             /**
@@ -78,10 +82,16 @@ class JsonWriterTest {
              */
             @Test
             void basic() throws IOException {
-                compactTest(writer -> writer.openObject().name("key").value("value").closeObject(),
+                compactTest(
+                        writer -> writer
+                                .openObject()
+                                .key("key")
+                                .value("value")
+                                .closeObject(),
                         //language=JSON
                         """
-                        {"key":"value"}""");
+                        {"key":"value"}"""
+                );
             }
 
             /**
@@ -91,11 +101,19 @@ class JsonWriterTest {
              */
             @Test
             void nestedObject() throws IOException {
-                compactTest(writer -> writer.openObject().name("foo").openObject().name("bar").value(
-                                "baz").closeObject().closeObject(),
+                compactTest(
+                        writer -> writer
+                                .openObject()
+                                .key("foo")
+                                .openObject()
+                                .key("bar")
+                                .value("baz")
+                                .closeObject()
+                                .closeObject(),
                         //language=JSON
                         """
-                        {"foo":{"bar":"baz"}}""");
+                        {"foo":{"bar":"baz"}}"""
+                );
             }
 
             /**
@@ -106,10 +124,17 @@ class JsonWriterTest {
             @Test
             void nestedArray() throws IOException {
                 compactTest(
-                        writer -> writer.openObject().name("key").openArray().value("value").closeArray().closeObject(),
+                        writer -> writer
+                                .openObject()
+                                .key("key")
+                                .openArray()
+                                .value("value")
+                                .closeArray()
+                                .closeObject(),
                         //language=JSON
                         """
-                        {"key":["value"]}""");
+                        {"key":["value"]}"""
+                );
             }
 
         }
@@ -126,11 +151,13 @@ class JsonWriterTest {
              * @throws IOException If this happens, the test fails.
              */
             @Test
-            void writeEmpty() throws IOException {
-                prettyTest(writer -> writer.openObject().closeObject(),
+            void empty() throws IOException {
+                prettyTest(
+                        writer -> writer.openObject().closeObject(),
                         //language=JSON
                         """
-                        {}""");
+                        {}"""
+                );
             }
 
             /**
@@ -139,13 +166,19 @@ class JsonWriterTest {
              * @throws IOException If this happens, the test fails.
              */
             @Test
-            void write() throws IOException {
-                prettyTest(writer -> writer.openObject().name("key").value("value").closeObject(),
+            void basic() throws IOException {
+                prettyTest(
+                        writer -> writer
+                                .openObject()
+                                .key("key")
+                                .value("value")
+                                .closeObject(),
                         //language=JSON
                         """
                         {
                           "key": "value"
-                        }""");
+                        }"""
+                );
             }
 
             /**
@@ -155,15 +188,23 @@ class JsonWriterTest {
              */
             @Test
             void nestedObject() throws IOException {
-                prettyTest(writer -> writer.openObject().name("foo").openObject().name("bar").value(
-                                "baz").closeObject().closeObject(),
+                prettyTest(
+                        writer -> writer
+                                .openObject()
+                                .key("foo")
+                                .openObject()
+                                .key("bar")
+                                .value("baz")
+                                .closeObject()
+                                .closeObject(),
                         //language=JSON
                         """
                         {
                           "foo": {
                             "bar": "baz"
                           }
-                        }""");
+                        }"""
+                );
             }
 
             /**
@@ -174,14 +215,21 @@ class JsonWriterTest {
             @Test
             void nestedArray() throws IOException {
                 prettyTest(
-                        writer -> writer.openObject().name("key").openArray().value("value").closeArray().closeObject(),
+                        writer -> writer
+                                .openObject()
+                                .key("key")
+                                .openArray()
+                                .value("value")
+                                .closeArray()
+                                .closeObject(),
                         //language=JSON
                         """
                         {
                           "key": [
                             "value"
                           ]
-                        }""");
+                        }"""
+                );
             }
 
         }
@@ -200,11 +248,13 @@ class JsonWriterTest {
              * @throws IOException If this happens, the test fails
              */
             @Test
-            void writeEmpty() throws IOException {
-                compactTest(writer -> writer.openArray().closeArray(),
+            void empty() throws IOException {
+                compactTest(
+                        writer -> writer.openArray().closeArray(),
                         //language=JSON
                         """
-                        []""");
+                        []"""
+                );
             }
 
             /**
@@ -213,11 +263,44 @@ class JsonWriterTest {
              * @throws IOException If this happens, the test fails
              */
             @Test
-            void write() throws IOException {
-                compactTest(writer -> writer.openArray().value("value").closeArray(),
+            void basic() throws IOException {
+                compactTest(
+                        writer -> writer.openArray().value("value").closeArray(),
                         //language=JSON
                         """
-                        ["value"]""");
+                        ["value"]"""
+                );
+            }
+
+            @Test
+            void nestedObject() throws IOException {
+                compactTest(
+                        writer -> writer
+                                .openArray()
+                                .openObject()
+                                .key("key")
+                                .value("value")
+                                .closeObject()
+                                .closeArray(),
+                        //language=JSON
+                        """
+                        [{"key":"value"}]"""
+                );
+            }
+
+            @Test
+            void nestedArray() throws IOException {
+                compactTest(
+                        writer -> writer
+                                .openArray()
+                                .openArray()
+                                .value("value")
+                                .closeArray()
+                                .closeArray(),
+                        //language=JSON
+                        """
+                        [["value"]]"""
+                );
             }
 
         }
@@ -232,11 +315,13 @@ class JsonWriterTest {
              * @throws IOException If this happens, the test fails
              */
             @Test
-            void writeEmpty() throws IOException {
-                prettyTest(writer -> writer.openArray().closeArray(),
+            void empty() throws IOException {
+                prettyTest(
+                        writer -> writer.openArray().closeArray(),
                         //language=JSON
                         """
-                        []""");
+                        []"""
+                );
             }
 
             /**
@@ -245,13 +330,54 @@ class JsonWriterTest {
              * @throws IOException If this happens, the test fails
              */
             @Test
-            void write() throws IOException {
-                prettyTest(writer -> writer.openArray().value("value").closeArray(),
+            void basic() throws IOException {
+                prettyTest(
+                        writer -> writer.openArray().value("value").closeArray(),
                         //language=JSON
                         """
                         [
                           "value"
-                        ]""");
+                        ]"""
+                );
+            }
+
+            @Test
+            void nestedObject() throws IOException {
+                prettyTest(
+                        writer -> writer
+                                .openArray()
+                                .openObject()
+                                .key("key")
+                                .value("value")
+                                .closeObject()
+                                .closeArray(),
+                        //language=JSON
+                        """
+                        [
+                          {
+                            "key": "value"
+                          }
+                        ]"""
+                );
+            }
+
+            @Test
+            void nestedArray() throws IOException {
+                prettyTest(
+                        writer -> writer
+                                .openArray()
+                                .openArray()
+                                .value("value")
+                                .closeArray()
+                                .closeArray(),
+                        //language=JSON
+                        """
+                        [
+                          [
+                            "value"
+                          ]
+                        ]"""
+                );
             }
         }
     }
