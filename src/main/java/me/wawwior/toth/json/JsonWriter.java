@@ -27,6 +27,12 @@ public class JsonWriter {
     private final Stack<State> stack = new Stack<>();
     private int indent = 0;
 
+    /**
+     * Constructs a new {@link JsonWriter} writing to the backing {@link Writer}.
+     *
+     * @param writer backing {@link Writer}
+     * @param style  style settings
+     */
     public JsonWriter(Writer writer, Style style) {
         this.writer = writer;
         this.style = style;
@@ -43,6 +49,12 @@ public class JsonWriter {
         stack.push(State.NONE);
     }
 
+    /**
+     * Starts a new json object.
+     *
+     * @return this
+     * @throws IOException if the current state does not accept a value.
+     */
     public JsonWriter openObject() throws IOException {
         beforeValue();
         stack.push(State.EMPTY_OBJECT);
@@ -51,6 +63,12 @@ public class JsonWriter {
         return this;
     }
 
+    /**
+     * Ends an open json object.
+     *
+     * @return this
+     * @throws IOException if the current state is not an object.
+     */
     public JsonWriter closeObject() throws IOException {
         if (!stack.peek().isObject())
             throw new IllegalArgumentException("Scope is " + stack.peek() + ", cannot close object!");
@@ -64,6 +82,12 @@ public class JsonWriter {
         return this;
     }
 
+    /**
+     * Starts a new json array.
+     *
+     * @return this
+     * @throws IOException if the current state does not accept a value.
+     */
     public JsonWriter openArray() throws IOException {
         beforeValue();
         stack.push(State.EMPTY_ARRAY);
@@ -72,6 +96,12 @@ public class JsonWriter {
         return this;
     }
 
+    /**
+     * Ends an open json object.
+     *
+     * @return this
+     * @throws IOException if the current state is not an array.
+     */
     public JsonWriter closeArray() throws IOException {
         if (!stack.peek().isArray())
             throw new IllegalArgumentException("Scope is " + stack.peek() + ", cannot close array!");
@@ -85,12 +115,26 @@ public class JsonWriter {
         return this;
     }
 
+    /**
+     * Writes a value
+     *
+     * @param string the value
+     * @return this
+     * @throws IOException if the current state is an object
+     */
     public JsonWriter value(String string) throws IOException {
         beforeValue();
         return string(string);
     }
 
-    public JsonWriter name(String string) throws IOException {
+    /**
+     * Writes a key
+     *
+     * @param string the key
+     * @return this
+     * @throws IOException if the current state is not an object
+     */
+    public JsonWriter key(String string) throws IOException {
         beforeName();
         stack.push(State.NAME);
         return string(string);
@@ -131,7 +175,8 @@ public class JsonWriter {
                 stack.pop();
                 writer.write(colon);
             }
-            case OBJECT, EMPTY_OBJECT -> throw new IllegalArgumentException("Scope is " + stack.peek() + "!");
+            case OBJECT, EMPTY_OBJECT ->
+                    throw new IllegalArgumentException("Scope is " + stack.peek() + "!");
         }
     }
 
@@ -172,17 +217,32 @@ public class JsonWriter {
         if (!style.newline().isEmpty()) writer.write(style.indent().repeat(indent));
     }
 
+    /**
+     * Flushes the backing {@link Writer}
+     *
+     * @throws IOException propagated from the backing {@link Writer}
+     */
     public void flush() throws IOException {
         writer.flush();
     }
 
     public interface Style {
 
-
+        /**
+         * Helper method to obtain a {@link Style} with newlines, spaces, and indent.
+         *
+         * @param indent the indent on new lines
+         * @return a configured {@link Style}
+         */
         static Style pretty(String indent) {
             return of(indent, "\n", true);
         }
 
+        /**
+         * Helper method to obtain a {@link Style} without newlines, spaces or indent.
+         *
+         * @return a configured {@link Style}
+         */
         static Style compact() {
             return of("", "", false);
         }
