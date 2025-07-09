@@ -71,7 +71,7 @@ public class JsonWriter {
      */
     public JsonWriter closeObject() throws IOException {
         if (!stack.peek().isObject())
-            throw new IllegalArgumentException("Scope is " + stack.peek() + ", cannot close object!");
+            throw new IllegalArgumentException("State is " + stack.peek() + ", cannot close object!");
         indent--;
         if (stack.peek() == State.OBJECT) {
             writeNewline();
@@ -104,7 +104,7 @@ public class JsonWriter {
      */
     public JsonWriter closeArray() throws IOException {
         if (!stack.peek().isArray())
-            throw new IllegalArgumentException("Scope is " + stack.peek() + ", cannot close array!");
+            throw new IllegalArgumentException("State is " + stack.peek() + ", cannot close array!");
         indent--;
         if (stack.peek() == State.ARRAY) {
             writeNewline();
@@ -136,7 +136,7 @@ public class JsonWriter {
      */
     public JsonWriter key(String string) throws IOException {
         beforeName();
-        stack.push(State.NAME);
+        stack.push(State.KEY);
         return string(string);
     }
 
@@ -171,12 +171,12 @@ public class JsonWriter {
                 writeIndent();
                 updateScope();
             }
-            case NAME -> {
+            case KEY -> {
                 stack.pop();
                 writer.write(colon);
             }
             case OBJECT, EMPTY_OBJECT ->
-                    throw new IllegalArgumentException("Scope is " + stack.peek() + "!");
+                    throw new IllegalArgumentException("State is " + stack.peek() + "!");
         }
     }
 
@@ -192,8 +192,8 @@ public class JsonWriter {
                 writeIndent();
                 updateScope();
             }
-            case NAME, ARRAY, EMPTY_ARRAY ->
-                    throw new IllegalArgumentException("Scope is " + stack.peek() + ", expected " + State.OBJECT + "!");
+            case KEY, ARRAY, EMPTY_ARRAY ->
+                    throw new IllegalArgumentException("State is " + stack.peek() + ", expected " + State.OBJECT + "!");
         }
     }
 
@@ -279,7 +279,7 @@ public class JsonWriter {
         EMPTY_ARRAY,
         OBJECT,
         EMPTY_OBJECT,
-        NAME;
+        KEY;
 
         public boolean isObject() {
             return this == OBJECT || this == EMPTY_OBJECT;
