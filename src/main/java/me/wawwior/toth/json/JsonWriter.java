@@ -52,7 +52,8 @@ public class JsonWriter {
     }
 
     public JsonWriter closeObject() throws IOException {
-        if (!stack.peek().isObject()) throw new IllegalArgumentException("Scope is " + stack.peek() + ", cannot close object!");
+        if (!stack.peek().isObject())
+            throw new IllegalArgumentException("Scope is " + stack.peek() + ", cannot close object!");
         indent--;
         if (stack.peek() == State.OBJECT) {
             writeNewline();
@@ -72,7 +73,8 @@ public class JsonWriter {
     }
 
     public JsonWriter closeArray() throws IOException {
-        if (!stack.peek().isArray()) throw new IllegalArgumentException("Scope is " + stack.peek() + ", cannot close array!");
+        if (!stack.peek().isArray())
+            throw new IllegalArgumentException("Scope is " + stack.peek() + ", cannot close array!");
         indent--;
         if (stack.peek() == State.ARRAY) {
             writeNewline();
@@ -145,7 +147,8 @@ public class JsonWriter {
                 writeIndent();
                 updateScope();
             }
-            case NAME, ARRAY, EMPTY_ARRAY -> throw new IllegalArgumentException("Scope is " + stack.peek() + ", expected " + State.OBJECT + "!");
+            case NAME, ARRAY, EMPTY_ARRAY ->
+                    throw new IllegalArgumentException("Scope is " + stack.peek() + ", expected " + State.OBJECT + "!");
         }
     }
 
@@ -204,7 +207,9 @@ public class JsonWriter {
         }
 
         String indent();
+
         String newline();
+
         boolean spaces();
     }
 
