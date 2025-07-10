@@ -1,10 +1,12 @@
 package me.wawwior.toth.json;
 
+import me.wawwior.toth.DataWriter;
+
 import java.io.IOException;
 import java.io.Writer;
 import java.util.Stack;
 
-public class JsonWriter {
+public class JsonWriter implements DataWriter {
 
     private static final String[] ESCAPES = new String[93];
 
@@ -50,12 +52,12 @@ public class JsonWriter {
     }
 
     /**
-     * Starts a new json object.
+     * {@inheritDoc}
      *
-     * @return this
-     * @throws IOException if the current state does not accept a value.
+     * @return {@inheritDoc}
+     * @throws IOException {@inheritDoc}
      */
-    public JsonWriter openObject() throws IOException {
+    public JsonWriter openMap() throws IOException {
         beforeValue();
         stack.push(State.EMPTY_OBJECT);
         writer.write("{");
@@ -64,12 +66,12 @@ public class JsonWriter {
     }
 
     /**
-     * Ends an open json object.
+     * {@inheritDoc}
      *
-     * @return this
-     * @throws IOException if the current state is not an object.
+     * @return {@inheritDoc}
+     * @throws IOException {@inheritDoc}
      */
-    public JsonWriter closeObject() throws IOException {
+    public JsonWriter closeMap() throws IOException {
         if (!stack.peek().isObject())
             throw new IllegalArgumentException("State is " + stack.peek() + ", cannot close object!");
         indent--;
@@ -83,12 +85,12 @@ public class JsonWriter {
     }
 
     /**
-     * Starts a new json array.
+     * {@inheritDoc}
      *
-     * @return this
-     * @throws IOException if the current state does not accept a value.
+     * @return {@inheritDoc}
+     * @throws IOException {@inheritDoc}
      */
-    public JsonWriter openArray() throws IOException {
+    public JsonWriter openList() throws IOException {
         beforeValue();
         stack.push(State.EMPTY_ARRAY);
         writer.write("[");
@@ -97,12 +99,12 @@ public class JsonWriter {
     }
 
     /**
-     * Ends an open json object.
+     * {@inheritDoc}
      *
-     * @return this
-     * @throws IOException if the current state is not an array.
+     * @return {@inheritDoc}
+     * @throws IOException {@inheritDoc}
      */
-    public JsonWriter closeArray() throws IOException {
+    public JsonWriter closeList() throws IOException {
         if (!stack.peek().isArray())
             throw new IllegalArgumentException("State is " + stack.peek() + ", cannot close array!");
         indent--;
@@ -116,27 +118,88 @@ public class JsonWriter {
     }
 
     /**
-     * Writes a value
+     * {@inheritDoc}
      *
-     * @param string the value
-     * @return this
-     * @throws IOException if the current state is an object
+     * @param key {@inheritDoc}
+     * @return {@inheritDoc}
+     * @throws IOException {@inheritDoc}
      */
-    public JsonWriter value(String string) throws IOException {
-        beforeValue();
-        return string(string);
+    public JsonWriter key(String key) throws IOException {
+        beforeName();
+        stack.push(State.KEY);
+        return string(key);
     }
 
     /**
-     * Writes a key
+     * {@inheritDoc}
      *
-     * @param string the key
-     * @return this
-     * @throws IOException if the current state is not an object
+     * @param b {@inheritDoc}
+     * @return {@inheritDoc}
+     * @throws IOException {@inheritDoc}
      */
-    public JsonWriter key(String string) throws IOException {
-        beforeName();
-        stack.push(State.KEY);
+    @Override
+    public DataWriter value(boolean b) throws IOException {
+        beforeValue();
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @param i {@inheritDoc}
+     * @return {@inheritDoc}
+     * @throws IOException {@inheritDoc}
+     */
+    @Override
+    public DataWriter value(int i) throws IOException {
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @param l {@inheritDoc}
+     * @return {@inheritDoc}
+     * @throws IOException {@inheritDoc}
+     */
+    @Override
+    public DataWriter value(long l) throws IOException {
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @param f {@inheritDoc}
+     * @return {@inheritDoc}
+     * @throws IOException {@inheritDoc}
+     */
+    @Override
+    public DataWriter value(float f) throws IOException {
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @param d {@inheritDoc}
+     * @return {@inheritDoc}
+     * @throws IOException {@inheritDoc}
+     */
+    @Override
+    public DataWriter value(double d) throws IOException {
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @param string {@inheritDoc}
+     * @return {@inheritDoc}
+     * @throws IOException {@inheritDoc}
+     */
+    public JsonWriter value(String string) throws IOException {
+        beforeValue();
         return string(string);
     }
 
@@ -218,14 +281,8 @@ public class JsonWriter {
     }
 
     /**
-     * Flushes the backing {@link Writer}
-     *
-     * @throws IOException propagated from the backing {@link Writer}
+     * Configuration Class for {@link JsonWriter} behaviour
      */
-    public void flush() throws IOException {
-        writer.flush();
-    }
-
     public interface Style {
 
         /**
@@ -248,6 +305,17 @@ public class JsonWriter {
         }
 
         static Style of(String indent, String newline, boolean spaces) {
+
+            StringBuilder builder = new StringBuilder();
+            builder.append("Style[");
+            if (!indent.isEmpty()) builder.append("indent,");
+            if (!newline.isEmpty()) builder.append("newline,");
+            if (spaces) builder.append("spaces,");
+            if (!indent.isEmpty() || !newline.isEmpty() || spaces)
+                builder.setLength(builder.length() - 1);
+            builder.append("]");
+            String name = builder.toString();
+
             return new Style() {
                 @Override
                 public String indent() {
@@ -263,6 +331,11 @@ public class JsonWriter {
                 public boolean spaces() {
                     return spaces;
                 }
+
+                @Override
+                public String toString() {
+                    return name;
+                }
             };
         }
 
@@ -271,6 +344,7 @@ public class JsonWriter {
         String newline();
 
         boolean spaces();
+
     }
 
     public enum State {
