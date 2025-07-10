@@ -2,9 +2,13 @@ package me.wawwior.toth.json;
 
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.io.StringWriter;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -15,34 +19,36 @@ class JsonWriterTest {
      * Utility method for creating tests.
      *
      * @param consumer the write operation
+     * @param style    the {@link JsonWriter.Style}
      * @param expected the expected result
      * @throws IOException If this happens, the test fails.
      */
-    void compactTest(ThrowingConsumer<JsonWriter> consumer, String expected)
-            throws IOException {
+    private static void writeTest(
+            ThrowingConsumer<JsonWriter> consumer,
+            JsonWriter.Style style,
+            String expected
+    ) throws IOException {
 
         StringWriter stringWriter = new StringWriter();
-        consumer.accept(new JsonWriter(stringWriter, JsonWriter.Style.compact()));
+        consumer.accept(new JsonWriter(stringWriter, style));
 
         assertEquals(expected, stringWriter.toString());
     }
 
     /**
-     * Utility method for creating tests.
+     * Utility method for creating test arguments.
      * <p>
      * The indent is set to 2 spaces
      *
-     * @param consumer the write operation
-     * @param expected the expected result
-     * @throws IOException If this happens, the test fails.
+     * @param compact the expected compact result.
+     * @param pretty  the expected pretty result.
+     * @return the stream of arguments
      */
-    void prettyTest(ThrowingConsumer<JsonWriter> consumer, String expected)
-            throws IOException {
-
-        StringWriter stringWriter = new StringWriter();
-        consumer.accept(new JsonWriter(stringWriter, JsonWriter.Style.pretty("  ")));
-
-        assertEquals(expected, stringWriter.toString());
+    private static Stream<Arguments> writeTestArgs(String compact, String pretty) {
+        return Stream.of(
+                Arguments.of(JsonWriter.Style.compact(), compact),
+                Arguments.of(JsonWriter.Style.pretty("  "), pretty)
+        );
     }
 
     /**
@@ -51,10 +57,7 @@ class JsonWriterTest {
      * @param consumer the write operation
      * @param expected the expected exception
      */
-    void throwsTest(
-            ThrowingConsumer<JsonWriter> consumer,
-            String expected
-    ) {
+    void throwsTest(ThrowingConsumer<JsonWriter> consumer, String expected) {
         StringWriter stringWriter = new StringWriter();
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
@@ -71,25 +74,25 @@ class JsonWriterTest {
     }
 
     /**
-     * Tests writing an object to a {@link JsonWriter}...
+     * Tests writing a map to a {@link JsonWriter}.
      */
     @Nested
-    class ObjectTests {
+    class MapTests {
 
         @Test
-        void valueThrows() {
+        void value_shouldThrowAfterOpenMap() {
 
             throwsTest(
-                    writer -> writer.openObject().value("value"),
+                    writer -> writer.openMap().value("value"),
                     "State is EMPTY_OBJECT!"
             );
         }
 
         @Test
-        void keyThrows() {
+        void key_shouldThrowAfterOpenList() {
 
             throwsTest(
-                    writer -> writer.openArray().key("key"),
+                    writer -> writer.openList().key("key"),
                     "State is EMPTY_ARRAY, expected OBJECT!"
             );
 
@@ -97,355 +100,268 @@ class JsonWriterTest {
 
         @SuppressWarnings("Convert2MethodRef")
         @Test
-        void closeThrows() {
+        void closeMap_shouldThrowOnEmptyWriter() {
 
             throwsTest(
-                    writer -> writer.closeObject(),
+                    writer -> writer.closeMap(),
                     "State is NONE, cannot close object!"
             );
         }
 
         /**
-         * ...with {@link JsonWriter.Style#compact()}.
+         * Tests writing an empty map.
+         *
+         * @throws IOException If this happens, the test fails.
          */
-        @Nested
-        class Compact {
+        @ParameterizedTest
+        @MethodSource
+        void empty(JsonWriter.Style style, String expected) throws IOException {
+            writeTest(writer -> writer.openMap().closeMap(), style, expected);
+        }
 
-            /**
-             * Tests writing an empty json object.
-             *
-             * @throws IOException If this happens, the test fails.
-             */
-            @Test
-            void empty() throws IOException {
-                compactTest(
-                        writer -> writer.openObject().closeObject(),
-                        //language=JSON
-                        """
-                        {}"""
-                );
-            }
-
-            /**
-             * Tests writing a json object with a key-value pair.
-             *
-             * @throws IOException If this happens, the test fails.
-             */
-            @Test
-            void basic() throws IOException {
-                compactTest(
-                        writer -> writer
-                                .openObject()
-                                .key("foo")
-                                .value("value")
-                                .key("bar")
-                                .value("value")
-                                .closeObject(),
-                        //language=JSON
-                        """
-                        {"foo":"value","bar":"value"}"""
-                );
-            }
-
-            /**
-             * Tests writing a json object with a nested object.
-             *
-             * @throws IOException If this happens, the test fails.
-             */
-            @Test
-            void nestedObject() throws IOException {
-                compactTest(
-                        writer -> writer
-                                .openObject()
-                                .key("foo")
-                                .openObject()
-                                .key("bar")
-                                .value("baz")
-                                .closeObject()
-                                .closeObject(),
-                        //language=JSON
-                        """
-                        {"foo":{"bar":"baz"}}"""
-                );
-            }
-
-            /**
-             * Tests writing a json object with a nested array.
-             *
-             * @throws IOException If this happens, the test fails.
-             */
-            @Test
-            void nestedArray() throws IOException {
-                compactTest(
-                        writer -> writer
-                                .openObject()
-                                .key("key")
-                                .openArray()
-                                .value("value")
-                                .closeArray()
-                                .closeObject(),
-                        //language=JSON
-                        """
-                        {"key":["value"]}"""
-                );
-            }
-
+        static Stream<Arguments> empty() {
+            return writeTestArgs(
+                    //language=JSON
+                    """
+                    {}""",
+                    //language=JSON
+                    """
+                    {}"""
+            );
         }
 
         /**
-         * ...with {@link JsonWriter.Style#pretty(String)}.
+         * Tests writing a map with a key-value pair.
+         *
+         * @throws IOException If this happens, the test fails.
          */
-        @Nested
-        class Pretty {
-
-            /**
-             * Tests writing an empty json object.
-             *
-             * @throws IOException If this happens, the test fails.
-             */
-            @Test
-            void empty() throws IOException {
-                prettyTest(
-                        writer -> writer.openObject().closeObject(),
-                        //language=JSON
-                        """
-                        {}"""
-                );
-            }
-
-            /**
-             * Tests writing a json object with a key-value pair.
-             *
-             * @throws IOException If this happens, the test fails.
-             */
-            @Test
-            void basic() throws IOException {
-                prettyTest(
-                        writer -> writer
-                                .openObject()
-                                .key("foo")
-                                .value("value")
-                                .key("bar")
-                                .value("value")
-                                .closeObject(),
-                        //language=JSON
-                        """
-                        {
-                          "foo": "value",
-                          "bar": "value"
-                        }"""
-                );
-            }
-
-            /**
-             * Tests writing a json object with a nested object.
-             *
-             * @throws IOException If this happens, the test fails.
-             */
-            @Test
-            void nestedObject() throws IOException {
-                prettyTest(
-                        writer -> writer
-                                .openObject()
-                                .key("foo")
-                                .openObject()
-                                .key("bar")
-                                .value("baz")
-                                .closeObject()
-                                .closeObject(),
-                        //language=JSON
-                        """
-                        {
-                          "foo": {
-                            "bar": "baz"
-                          }
-                        }"""
-                );
-            }
-
-            /**
-             * Tests writing a json object with a nested array.
-             *
-             * @throws IOException If this happens, the test fails.
-             */
-            @Test
-            void nestedArray() throws IOException {
-                prettyTest(
-                        writer -> writer
-                                .openObject()
-                                .key("key")
-                                .openArray()
-                                .value("value")
-                                .closeArray()
-                                .closeObject(),
-                        //language=JSON
-                        """
-                        {
-                          "key": [
-                            "value"
-                          ]
-                        }"""
-                );
-            }
-
+        @ParameterizedTest
+        @MethodSource
+        void basic(JsonWriter.Style style, String expected) throws IOException {
+            writeTest(
+                    writer -> writer
+                            .openMap()
+                            .key("foo")
+                            .value("value")
+                            .key("bar")
+                            .value("value")
+                            .closeMap(), style, expected
+            );
         }
 
+        static Stream<Arguments> basic() {
+            return writeTestArgs(
+                    //language=JSON
+                    """
+                    {"foo":"value","bar":"value"}""",
+                    //language=JSON
+                    """
+                    {
+                      "foo": "value",
+                      "bar": "value"
+                    }"""
+            );
+        }
+
+        /**
+         * Tests writing a map with a nested map.
+         *
+         * @throws IOException If this happens, the test fails.
+         */
+        @ParameterizedTest
+        @MethodSource
+        void nestedMap(JsonWriter.Style style, String expected) throws IOException {
+            writeTest(
+                    writer -> writer
+                            .openMap()
+                            .key("foo")
+                            .openMap()
+                            .key("bar")
+                            .value("value")
+                            .closeMap()
+                            .closeMap(), style, expected
+            );
+        }
+
+        static Stream<Arguments> nestedMap() {
+            return writeTestArgs(
+                    //language=JSON
+                    """
+                    {"foo":{"bar":"value"}}""",
+                    //language=JSON
+                    """
+                    {
+                      "foo": {
+                        "bar": "value"
+                      }
+                    }"""
+            );
+        }
+
+        /**
+         * Tests writing a map with a nested list.
+         *
+         * @throws IOException If this happens, the test fails.
+         */
+        @ParameterizedTest
+        @MethodSource
+        void nestedList(JsonWriter.Style style, String expected) throws IOException {
+            writeTest(
+                    writer -> writer
+                            .openMap()
+                            .key("foo")
+                            .openList()
+                            .value("value")
+                            .closeList()
+                            .closeMap(), style, expected
+            );
+        }
+
+        static Stream<Arguments> nestedList() {
+            return writeTestArgs(
+                    //language=JSON
+                    """
+                    {"foo":["value"]}""",
+                    //language=JSON
+                    """
+                    {
+                      "foo": [
+                        "value"
+                      ]
+                    }"""
+            );
+        }
     }
 
     @Nested
-    class ArrayTests {
+    class ListTests {
 
         @SuppressWarnings("Convert2MethodRef")
         @Test
         void closeThrows() {
 
             throwsTest(
-                    writer -> writer.closeArray(),
+                    writer -> writer.closeList(),
                     "State is NONE, cannot close array!"
             );
         }
 
-        @Nested
-        class Compact {
-
-            /**
-             * Tests writing an empty json array.
-             *
-             * @throws IOException If this happens, the test fails
-             */
-            @Test
-            void empty() throws IOException {
-                compactTest(
-                        writer -> writer.openArray().closeArray(),
-                        //language=JSON
-                        """
-                        []"""
-                );
-            }
-
-            /**
-             * Tests writing a json array with a value.
-             *
-             * @throws IOException If this happens, the test fails
-             */
-            @Test
-            void basic() throws IOException {
-                compactTest(
-                        writer -> writer.openArray().value("foo").value("bar").closeArray(),
-                        //language=JSON
-                        """
-                        ["foo","bar"]"""
-                );
-            }
-
-            @Test
-            void nestedObject() throws IOException {
-                compactTest(
-                        writer -> writer
-                                .openArray()
-                                .openObject()
-                                .key("key")
-                                .value("value")
-                                .closeObject()
-                                .closeArray(),
-                        //language=JSON
-                        """
-                        [{"key":"value"}]"""
-                );
-            }
-
-            @Test
-            void nestedArray() throws IOException {
-                compactTest(
-                        writer -> writer
-                                .openArray()
-                                .openArray()
-                                .value("value")
-                                .closeArray()
-                                .closeArray(),
-                        //language=JSON
-                        """
-                        [["value"]]"""
-                );
-            }
-
+        /**
+         * Tests writing an empty list.
+         *
+         * @throws IOException If this happens, the test fails.
+         */
+        @ParameterizedTest
+        @MethodSource
+        void empty(JsonWriter.Style style, String expected) throws IOException {
+            writeTest(writer -> writer.openList().closeList(), style, expected);
         }
 
+        static Stream<Arguments> empty() {
+            return writeTestArgs(
+                    //language=JSON
+                    """
+                    []""",
+                    //language=JSON
+                    """
+                    []"""
+            );
+        }
 
-        @Nested
-        class Pretty {
+        /**
+         * Tests writing a list with a values.
+         *
+         * @throws IOException If this happens, the test fails.
+         */
+        @ParameterizedTest
+        @MethodSource
+        void basic(JsonWriter.Style style, String expected) throws IOException {
+            writeTest(
+                    writer -> writer.openList().value("foo").value("bar").closeList(),
+                    style,
+                    expected
+            );
+        }
 
-            /**
-             * Tests writing a json array with a value.
-             *
-             * @throws IOException If this happens, the test fails
-             */
-            @Test
-            void empty() throws IOException {
-                prettyTest(
-                        writer -> writer.openArray().closeArray(),
-                        //language=JSON
-                        """
-                        []"""
-                );
-            }
+        static Stream<Arguments> basic() {
+            return writeTestArgs(
+                    //language=JSON
+                    """
+                    ["foo","bar"]""",
+                    //language=JSON
+                    """
+                    [
+                      "foo",
+                      "bar"
+                    ]"""
+            );
+        }
 
-            /**
-             * Tests writing a json array with a value.
-             *
-             * @throws IOException If this happens, the test fails
-             */
-            @Test
-            void basic() throws IOException {
-                prettyTest(
-                        writer -> writer.openArray().value("foo").value("bar").closeArray(),
-                        //language=JSON
-                        """
-                        [
-                          "foo",
-                          "bar"
-                        ]"""
-                );
-            }
+        /**
+         * Tests writing a list with a nested map.
+         *
+         * @throws IOException If this happens, the test fails.
+         */
+        @ParameterizedTest
+        @MethodSource
+        void nestedMap(JsonWriter.Style style, String expected) throws IOException {
+            writeTest(
+                    writer -> writer
+                            .openList()
+                            .openMap()
+                            .key("foo")
+                            .value("value")
+                            .closeMap()
+                            .closeList(), style, expected
+            );
+        }
 
-            @Test
-            void nestedObject() throws IOException {
-                prettyTest(
-                        writer -> writer
-                                .openArray()
-                                .openObject()
-                                .key("key")
-                                .value("value")
-                                .closeObject()
-                                .closeArray(),
-                        //language=JSON
-                        """
-                        [
-                          {
-                            "key": "value"
-                          }
-                        ]"""
-                );
-            }
+        static Stream<Arguments> nestedMap() {
+            return writeTestArgs(
+                    //language=JSON
+                    """
+                    [{"foo":"value"}]""",
+                    //language=JSON
+                    """
+                    [
+                      {
+                        "foo": "value"
+                      }
+                    ]"""
+            );
+        }
 
-            @Test
-            void nestedArray() throws IOException {
-                prettyTest(
-                        writer -> writer
-                                .openArray()
-                                .openArray()
-                                .value("value")
-                                .closeArray()
-                                .closeArray(),
-                        //language=JSON
-                        """
-                        [
-                          [
-                            "value"
-                          ]
-                        ]"""
-                );
-            }
+        /**
+         * Tests writing a list with a nested map.
+         *
+         * @throws IOException If this happens, the test fails.
+         */
+        @ParameterizedTest
+        @MethodSource
+        void nestedList(JsonWriter.Style style, String expected) throws IOException {
+            writeTest(
+                    writer -> writer
+                            .openList()
+                            .openList()
+                            .value("value")
+                            .closeList()
+                            .closeList(), style, expected
+            );
+        }
+
+        static Stream<Arguments> nestedList() {
+            return writeTestArgs(
+                    //language=JSON
+                    """
+                    [["value"]]""",
+                    //language=JSON
+                    """
+                    [
+                      [
+                        "value"
+                      ]
+                    ]"""
+            );
         }
     }
 }
