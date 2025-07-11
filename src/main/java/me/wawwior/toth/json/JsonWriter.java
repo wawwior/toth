@@ -184,7 +184,6 @@ public class JsonWriter implements DataWriter {
         beforeValue();
         boolean valid = Float.isFinite(f) && !Float.isNaN(f);
         if (!valid) {
-            //TODO: write test for this
             throw new IllegalArgumentException("float with value " + f + " is not valid in json!");
         }
         writer.write(String.valueOf(f).toLowerCase());
@@ -203,7 +202,6 @@ public class JsonWriter implements DataWriter {
         beforeValue();
         boolean valid = Double.isFinite(d) && !Double.isNaN(d);
         if (!valid) {
-            //TODO: write test for this
             throw new IllegalArgumentException("double with value " + d + " is not valid in json!");
         }
         writer.write(String.valueOf(d).toLowerCase());
@@ -220,7 +218,6 @@ public class JsonWriter implements DataWriter {
     public JsonWriter value(String string) throws IOException {
         beforeValue();
         if (string == null) {
-            //TODO: write test for this
             throw new NullPointerException("string should not be null!");
         }
         return string(string);

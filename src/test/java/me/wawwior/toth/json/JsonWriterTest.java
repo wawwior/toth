@@ -110,9 +110,19 @@ class JsonWriterTest {
      * @param expected the expected exception
      */
     void throwsTest(ThrowingConsumer<JsonWriter> consumer, String expected) {
+        throwsTest(consumer, IllegalArgumentException.class, expected);
+    }
+
+    /**
+     * Utility method for creating tests.
+     *
+     * @param consumer the write operation
+     * @param expected the expected exception
+     */
+    <T extends Exception> void throwsTest(ThrowingConsumer<JsonWriter> consumer, Class<T> exceptionType, String expected) {
         StringWriter stringWriter = new StringWriter();
-        IllegalArgumentException exception = assertThrows(
-                IllegalArgumentException.class,
+        T exception = assertThrows(
+                exceptionType,
                 () -> consumer.accept(new JsonWriter(
                         stringWriter,
                         JsonWriter.Style.compact()
@@ -127,19 +137,16 @@ class JsonWriterTest {
 
     @Test
     void value_afterOpenMap() {
-
         throwsTest(writer -> writer.openMap().value("value"), "State is EMPTY_MAP!");
     }
 
     @Test
     void value_afterValue_onRoot() {
-
         throwsTest(writer -> writer.value("value").value("value"), "State is CLOSED!");
     }
 
     @Test
     void key_afterOpenList() {
-
         throwsTest(
                 writer -> writer.openList().key("key"),
                 "State is EMPTY_LIST, expected MAP!"
@@ -148,14 +155,12 @@ class JsonWriterTest {
 
     @Test
     void key_onRoot() {
-
         throwsTest(writer -> writer.key("key"), "State is ROOT, expected MAP!");
     }
 
     @SuppressWarnings("Convert2MethodRef")
     @Test
     void closeMap_onRoot() {
-
         throwsTest(
                 writer -> writer.closeMap(),
                 "State is ROOT, expected MAP or EMPTY_MAP!"
@@ -164,7 +169,6 @@ class JsonWriterTest {
 
     @Test
     void closeMap_afterOpenList() {
-
         throwsTest(
                 writer -> writer.openList().closeMap(),
                 "State is EMPTY_LIST, expected MAP or EMPTY_MAP!"
@@ -173,7 +177,6 @@ class JsonWriterTest {
 
     @Test
     void closeMap_afterKey() {
-
         throwsTest(
                 writer -> writer.openMap().key("key").closeMap(),
                 "State is KEY, expected MAP or EMPTY_MAP!"
@@ -183,7 +186,6 @@ class JsonWriterTest {
 
     @Test
     void closeMap_afterValue_inList() {
-
         throwsTest(
                 writer -> writer.openList().value("value").closeMap(),
                 "State is LIST, expected MAP or EMPTY_MAP!"
@@ -193,7 +195,6 @@ class JsonWriterTest {
     @SuppressWarnings("Convert2MethodRef")
     @Test
     void closeList_onRoot() {
-
         throwsTest(
                 writer -> writer.closeList(),
                 "State is ROOT, expected LIST or EMPTY_LIST!"
@@ -202,7 +203,6 @@ class JsonWriterTest {
 
     @Test
     void closeList_afterOpenMap() {
-
         throwsTest(
                 writer -> writer.openMap().closeList(),
                 "State is EMPTY_MAP, expected LIST or EMPTY_LIST!"
@@ -211,7 +211,6 @@ class JsonWriterTest {
 
     @Test
     void closeList_afterKey() {
-
         throwsTest(
                 writer -> writer.openMap().key("key").closeList(),
                 "State is KEY, expected LIST or EMPTY_LIST!"
@@ -220,10 +219,50 @@ class JsonWriterTest {
 
     @Test
     void closeList_afterValue_inMap() {
-
         throwsTest(
                 writer -> writer.openMap().key("key").value("value").closeList(),
                 "State is MAP, expected LIST or EMPTY_LIST!"
+        );
+    }
+
+    @Test
+    void value_String_null() {
+        throwsTest(
+                writer -> writer.openMap().key("key").value(null),
+                NullPointerException.class,
+                "string should not be null!"
+        );
+    }
+
+    @Test
+    void value_float_Infinity() {
+        throwsTest(
+                writer -> writer.value(Float.POSITIVE_INFINITY),
+                "float with value Infinity is not valid in json!"
+        );
+    }
+
+    @Test
+    void value_float_NaN() {
+        throwsTest(
+                writer -> writer.value(Float.NaN),
+                "float with value NaN is not valid in json!"
+        );
+    }
+
+    @Test
+    void value_double_Infinity() {
+        throwsTest(
+                writer -> writer.value(Double.POSITIVE_INFINITY),
+                "double with value Infinity is not valid in json!"
+        );
+    }
+
+    @Test
+    void value_double_NaN() {
+        throwsTest(
+                writer -> writer.value(Double.NaN),
+                "double with value NaN is not valid in json!"
         );
     }
 
@@ -239,7 +278,6 @@ class JsonWriterTest {
                 List.of(true, false),
                 //language=JSON
                 List.of(
-
                         """
                         true""",
                         """
