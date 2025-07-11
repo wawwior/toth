@@ -48,7 +48,7 @@ public class JsonWriter implements DataWriter {
         } else {
             comma = ",";
         }
-        stack.push(State.NONE);
+        stack.push(State.ROOT);
     }
 
     /**
@@ -59,7 +59,7 @@ public class JsonWriter implements DataWriter {
      */
     public JsonWriter openMap() throws IOException {
         beforeValue();
-        stack.push(State.EMPTY_OBJECT);
+        stack.push(State.EMPTY_MAP);
         writer.write("{");
         indent++;
         return this;
@@ -73,9 +73,9 @@ public class JsonWriter implements DataWriter {
      */
     public JsonWriter closeMap() throws IOException {
         if (!stack.peek().isObject())
-            throw new IllegalArgumentException("State is " + stack.peek() + ", cannot close object!");
+            throw new IllegalArgumentException("State is " + stack.peek() + ", expected " + State.MAP + " or " + State.EMPTY_MAP + "!");
         indent--;
-        if (stack.peek() == State.OBJECT) {
+        if (stack.peek() == State.MAP) {
             writeNewline();
             writeIndent();
         }
@@ -92,7 +92,7 @@ public class JsonWriter implements DataWriter {
      */
     public JsonWriter openList() throws IOException {
         beforeValue();
-        stack.push(State.EMPTY_ARRAY);
+        stack.push(State.EMPTY_LIST);
         writer.write("[");
         indent++;
         return this;
@@ -106,9 +106,9 @@ public class JsonWriter implements DataWriter {
      */
     public JsonWriter closeList() throws IOException {
         if (!stack.peek().isArray())
-            throw new IllegalArgumentException("State is " + stack.peek() + ", cannot close array!");
+            throw new IllegalArgumentException("State is " + stack.peek() + ", expected " + State.LIST + " or " + State.EMPTY_LIST + "!");
         indent--;
-        if (stack.peek() == State.ARRAY) {
+        if (stack.peek() == State.LIST) {
             writeNewline();
             writeIndent();
         }
@@ -125,7 +125,7 @@ public class JsonWriter implements DataWriter {
      * @throws IOException {@inheritDoc}
      */
     public JsonWriter key(String key) throws IOException {
-        beforeName();
+        beforeKey();
         stack.push(State.KEY);
         return string(key);
     }
@@ -140,6 +140,7 @@ public class JsonWriter implements DataWriter {
     @Override
     public DataWriter value(boolean b) throws IOException {
         beforeValue();
+        writer.write(String.valueOf(b));
         return this;
     }
 
@@ -152,6 +153,8 @@ public class JsonWriter implements DataWriter {
      */
     @Override
     public DataWriter value(int i) throws IOException {
+        beforeValue();
+        writer.write(String.valueOf(i));
         return this;
     }
 
@@ -164,6 +167,8 @@ public class JsonWriter implements DataWriter {
      */
     @Override
     public DataWriter value(long l) throws IOException {
+        beforeValue();
+        writer.write(String.valueOf(l));
         return this;
     }
 
@@ -176,6 +181,13 @@ public class JsonWriter implements DataWriter {
      */
     @Override
     public DataWriter value(float f) throws IOException {
+        beforeValue();
+        boolean valid = Float.isFinite(f) && !Float.isNaN(f);
+        if (!valid) {
+            //TODO: write test for this
+            throw new IllegalArgumentException("float with value " + f + " is not valid in json!");
+        }
+        writer.write(String.valueOf(f).toLowerCase());
         return this;
     }
 
@@ -188,6 +200,13 @@ public class JsonWriter implements DataWriter {
      */
     @Override
     public DataWriter value(double d) throws IOException {
+        beforeValue();
+        boolean valid = Double.isFinite(d) && !Double.isNaN(d);
+        if (!valid) {
+            //TODO: write test for this
+            throw new IllegalArgumentException("double with value " + d + " is not valid in json!");
+        }
+        writer.write(String.valueOf(d).toLowerCase());
         return this;
     }
 
@@ -200,6 +219,10 @@ public class JsonWriter implements DataWriter {
      */
     public JsonWriter value(String string) throws IOException {
         beforeValue();
+        if (string == null) {
+            //TODO: write test for this
+            throw new NullPointerException("string should not be null!");
+        }
         return string(string);
     }
 
@@ -224,12 +247,15 @@ public class JsonWriter implements DataWriter {
 
     private void beforeValue() throws IOException {
         switch (stack.peek()) {
-            case ARRAY -> {
+            case ROOT -> {
+                updateScope();
+            }
+            case LIST -> {
                 writer.write(comma);
                 writeNewline();
                 writeIndent();
             }
-            case EMPTY_ARRAY -> {
+            case EMPTY_LIST -> {
                 writeNewline();
                 writeIndent();
                 updateScope();
@@ -238,37 +264,41 @@ public class JsonWriter implements DataWriter {
                 stack.pop();
                 writer.write(colon);
             }
-            case OBJECT, EMPTY_OBJECT ->
+            case MAP, EMPTY_MAP, CLOSED->
                     throw new IllegalArgumentException("State is " + stack.peek() + "!");
         }
     }
 
-    private void beforeName() throws IOException {
+    private void beforeKey() throws IOException {
         switch (stack.peek()) {
-            case OBJECT -> {
+            case MAP -> {
                 writer.write(comma);
                 writeNewline();
                 writeIndent();
             }
-            case EMPTY_OBJECT -> {
+            case EMPTY_MAP -> {
                 writeNewline();
                 writeIndent();
                 updateScope();
             }
-            case KEY, ARRAY, EMPTY_ARRAY ->
-                    throw new IllegalArgumentException("State is " + stack.peek() + ", expected " + State.OBJECT + "!");
+            case KEY, LIST, EMPTY_LIST, ROOT, CLOSED ->
+                    throw new IllegalArgumentException("State is " + stack.peek() + ", expected " + State.MAP + "!");
         }
     }
 
     private void updateScope() {
         if (stack.peek().isArray()) {
             stack.pop();
-            stack.push(State.ARRAY);
+            stack.push(State.LIST);
             return;
         }
         if (stack.peek().isObject()) {
             stack.pop();
-            stack.push(State.OBJECT);
+            stack.push(State.MAP);
+        }
+        if (stack.peek() == State.ROOT) {
+            stack.pop();
+            stack.push(State.CLOSED);
         }
     }
 
@@ -348,19 +378,20 @@ public class JsonWriter implements DataWriter {
     }
 
     public enum State {
-        NONE,
-        ARRAY,
-        EMPTY_ARRAY,
-        OBJECT,
-        EMPTY_OBJECT,
-        KEY;
+        ROOT,
+        LIST,
+        EMPTY_LIST,
+        MAP,
+        EMPTY_MAP,
+        KEY,
+        CLOSED;
 
         public boolean isObject() {
-            return this == OBJECT || this == EMPTY_OBJECT;
+            return this == MAP || this == EMPTY_MAP;
         }
 
         public boolean isArray() {
-            return this == ARRAY || this == EMPTY_ARRAY;
+            return this == LIST || this == EMPTY_LIST;
         }
     }
 }
