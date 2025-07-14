@@ -37,4 +37,10 @@ public class Streams {
         return StreamSupport.stream(iterable.spliterator(), parallel);
     }
 
+    public static <T, E extends Exception> void catchingForEach(Iterable<T> iterable, CatchingConsumer<T, E> consumer, Class<E> eClass) throws E {
+        for (T t : iterable) {
+            consumer.accept(t);
+        }
+    }
+
 }
