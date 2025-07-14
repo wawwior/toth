@@ -1,5 +1,6 @@
 package me.wawwior.toth.json;
 
+import me.wawwior.toth.util.CatchingConsumer;
 import me.wawwior.toth.util.Pair;
 import me.wawwior.toth.util.Streams;
 import org.junit.jupiter.api.Test;
@@ -17,123 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class JsonWriterTest {
 
-    /**
-     * Utility method for creating tests.
-     *
-     * @param consumer the write operation
-     * @param style    the {@link JsonWriter.Style}
-     * @param expected the expected result
-     * @throws IOException If this happens, the test fails.
-     */
-    private static void writeTest(
-            ThrowingConsumer<JsonWriter> consumer,
-            JsonWriter.Style style,
-            String expected
-    ) throws IOException {
-
-        StringWriter stringWriter = new StringWriter();
-        consumer.accept(new JsonWriter(stringWriter, style));
-
-        assertEquals(expected, stringWriter.toString());
-    }
-
-    /**
-     * Utility method for creating test arguments.
-     * <p>
-     * The indent is set to 2 spaces
-     *
-     * @param expected the expected result.
-     * @return the stream of arguments
-     */
-    private static Stream<Arguments> testArgs(String expected) {
-        return testArgs(expected, expected);
-    }
-
-    /**
-     * Utility method for creating test arguments.
-     * <p>
-     * The indent is set to 2 spaces
-     *
-     * @param compact the expected compact result.
-     * @param pretty  the expected pretty result.
-     * @return the stream of arguments
-     */
-    private static Stream<Arguments> testArgs(String compact, String pretty) {
-        return Stream.of(
-                Arguments.of(JsonWriter.Style.compact(), compact),
-                Arguments.of(JsonWriter.Style.pretty("  "), pretty)
-        );
-    }
-
-    private static <T> Stream<Arguments> valueTestArgs(T value, String expected) {
-        return valueTestArgs(value, expected, expected);
-    }
-
-    private static <T> Stream<Arguments> multiValueTestArgs(
-            List<T> values,
-            List<String> expected
-    ) {
-        return Streams.zip(
-                values.stream(),
-                expected.stream(),
-                (v, e) -> valueTestArgs(v, e, e)
-        ).flatMap(s -> s);
-    }
-
-    private static <T> Stream<Arguments> valueTestArgs(
-            T value,
-            String compact,
-            String pretty
-    ) {
-        return Stream.of(
-                Arguments.of(value, JsonWriter.Style.compact(), compact),
-                Arguments.of(value, JsonWriter.Style.pretty("  "), pretty)
-        );
-    }
-
-    private static <T> Stream<Arguments> multiValueTestArgs(
-            List<T> values,
-            List<String> compact,
-            List<String> pretty
-    ) {
-        return Streams.zip(
-                values.stream(),
-                Streams.zip(compact, pretty, Pair::of),
-                (v, pair) -> valueTestArgs(v, pair.a(), pair.b())
-        ).flatMap(s -> s);
-    }
-
-    /**
-     * Utility method for creating tests.
-     *
-     * @param consumer the write operation
-     * @param expected the expected exception
-     */
-    void throwsTest(ThrowingConsumer<JsonWriter> consumer, String expected) {
-        throwsTest(consumer, IllegalArgumentException.class, expected);
-    }
-
-    /**
-     * Utility method for creating tests.
-     *
-     * @param consumer the write operation
-     * @param expected the expected exception
-     */
-    <T extends Exception> void throwsTest(ThrowingConsumer<JsonWriter> consumer, Class<T> exceptionType, String expected) {
-        StringWriter stringWriter = new StringWriter();
-        T exception = assertThrows(
-                exceptionType,
-                () -> consumer.accept(new JsonWriter(
-                        stringWriter,
-                        JsonWriter.Style.compact()
-                ))
-        );
-        assertEquals(expected, exception.getMessage());
-    }
-
-    interface ThrowingConsumer<T> {
-        void accept(T t) throws IOException;
-    }
+    // Tests
 
     @Test
     void value_afterOpenMap() {
@@ -940,6 +825,122 @@ class JsonWriterTest {
                   "value"
                 ]"""
         );
+    }
+
+    // Utility
+
+    /**
+     * Utility method for creating tests.
+     *
+     * @param consumer the write operation
+     * @param style    the {@link JsonWriter.Style}
+     * @param expected the expected result
+     * @throws IOException If this happens, the test fails.
+     */
+    private static void writeTest(
+            CatchingConsumer<JsonWriter, IOException> consumer,
+            JsonWriter.Style style,
+            String expected
+    ) throws IOException {
+
+        StringWriter stringWriter = new StringWriter();
+        consumer.accept(new JsonWriter(stringWriter, style));
+
+        assertEquals(expected, stringWriter.toString());
+    }
+
+    /**
+     * Utility method for creating test arguments.
+     * <p>
+     * The indent is set to 2 spaces
+     *
+     * @param expected the expected result.
+     * @return the stream of arguments
+     */
+    private static Stream<Arguments> testArgs(String expected) {
+        return testArgs(expected, expected);
+    }
+
+    /**
+     * Utility method for creating test arguments.
+     * <p>
+     * The indent is set to 2 spaces
+     *
+     * @param compact the expected compact result.
+     * @param pretty  the expected pretty result.
+     * @return the stream of arguments
+     */
+    private static Stream<Arguments> testArgs(String compact, String pretty) {
+        return Stream.of(
+                Arguments.of(JsonWriter.Style.compact(), compact),
+                Arguments.of(JsonWriter.Style.pretty("  "), pretty)
+        );
+    }
+
+    private static <T> Stream<Arguments> valueTestArgs(T value, String expected) {
+        return valueTestArgs(value, expected, expected);
+    }
+
+    private static <T> Stream<Arguments> multiValueTestArgs(
+            List<T> values,
+            List<String> expected
+    ) {
+        return Streams.zip(
+                values.stream(),
+                expected.stream(),
+                JsonWriterTest::valueTestArgs
+        ).flatMap(s -> s);
+    }
+
+    private static <T> Stream<Arguments> valueTestArgs(
+            T value,
+            String compact,
+            String pretty
+    ) {
+        return Stream.of(
+                Arguments.of(value, JsonWriter.Style.compact(), compact),
+                Arguments.of(value, JsonWriter.Style.pretty("  "), pretty)
+        );
+    }
+
+    private static <T> Stream<Arguments> multiValueTestArgs(
+            List<T> values,
+            List<String> compact,
+            List<String> pretty
+    ) {
+        return Streams.zip(
+                values.stream(),
+                Streams.zip(compact, pretty, Pair::of),
+                (v, pair) -> valueTestArgs(v, pair.a(), pair.b())
+        ).flatMap(s -> s);
+    }
+
+    /**
+     * Utility method for creating tests.
+     *
+     * @param consumer the write operation
+     * @param expected the expected exception
+     */
+    void throwsTest(CatchingConsumer<JsonWriter, IOException> consumer, String expected) {
+        throwsTest(consumer, IllegalArgumentException.class, expected);
+    }
+
+    /**
+     * Utility method for creating tests.
+     *
+     * @param consumer the write operation
+     * @param expected the expected exception
+     */
+    <T extends Exception> void throwsTest(CatchingConsumer<JsonWriter, IOException> consumer, Class<T> exceptionType, String expected) {
+        StringWriter stringWriter = new StringWriter();
+        T exception = assertThrows(
+                exceptionType,
+                () -> consumer.accept(new JsonWriter(
+                        stringWriter,
+                        JsonWriter.Style.compact()
+                ))
+        );
+        assertEquals(expected, exception.getMessage());
     }
 
 }
