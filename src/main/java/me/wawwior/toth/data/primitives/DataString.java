@@ -1,7 +1,9 @@
 package me.wawwior.toth.data.primitives;
 
+import me.wawwior.toth.DataReader;
 import me.wawwior.toth.DataWriter;
 import me.wawwior.toth.data.DataElement;
+import me.wawwior.toth.data.DataMap;
 
 import java.io.IOException;
 
@@ -15,6 +17,10 @@ public class DataString extends DataElement {
 
     public String value() {
         return value;
+    }
+
+    public static DataString read(DataReader reader) throws IOException {
+        return new DataString(reader.readString());
     }
 
     @Override

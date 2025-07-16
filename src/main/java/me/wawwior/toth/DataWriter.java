@@ -80,6 +80,8 @@ public interface DataWriter {
      */
     DataWriter value(double d) throws IOException;
 
+    DataWriter value(Number number) throws IOException;
+
     /**
      * Writes a string value on the writer.
      * @param string value

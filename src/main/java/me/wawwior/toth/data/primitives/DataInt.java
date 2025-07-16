@@ -1,5 +1,6 @@
 package me.wawwior.toth.data.primitives;
 
+import me.wawwior.toth.DataReader;
 import me.wawwior.toth.DataWriter;
 import me.wawwior.toth.data.DataElement;
 
@@ -15,6 +16,10 @@ public class DataInt extends DataElement {
 
     public int value() {
         return value;
+    }
+
+    public static DataInt read(DataReader reader) throws IOException {
+        return new DataInt(reader.readInt());
     }
 
     @Override

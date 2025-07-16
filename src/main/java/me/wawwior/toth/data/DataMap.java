@@ -1,5 +1,7 @@
 package me.wawwior.toth.data;
 
+import com.google.gson.stream.JsonReader;
+import me.wawwior.toth.DataReader;
 import me.wawwior.toth.DataWriter;
 
 import java.io.IOException;
@@ -20,6 +22,14 @@ public class DataMap extends DataElement {
 
     public void remove(String key) {
         elements.remove(key);
+    }
+
+    public static DataMap read(DataReader reader) throws IOException {
+        DataMap map = new DataMap();
+        reader.enterMap();
+        while (reader.hasNext()) map.put(reader.readKey(), reader.nextType().read(reader));
+        reader.leaveMap();
+        return map;
     }
 
     @Override

@@ -1,6 +1,7 @@
 package me.wawwior.toth.data;
 
 import com.google.gson.JsonElement;
+import me.wawwior.toth.DataReader;
 import me.wawwior.toth.DataWriter;
 
 import java.io.IOException;
@@ -25,6 +26,14 @@ public class DataList extends DataElement {
 
     public void remove(int index) {
         elements.remove(index);
+    }
+
+    public static DataList read(DataReader reader) throws IOException {
+        DataList list = new DataList();
+        reader.enterList();
+        while (reader.hasNext()) list.add(reader.nextType().read(reader));
+        reader.leaveList();
+        return list;
     }
 
     @Override
