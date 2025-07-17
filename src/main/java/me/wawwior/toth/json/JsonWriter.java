@@ -57,7 +57,7 @@ public class JsonWriter implements DataWriter {
      * @return {@inheritDoc}
      * @throws IOException {@inheritDoc}
      */
-    public JsonWriter openMap() throws IOException {
+    public DataWriter openMap() throws IOException {
         beforeValue();
         stack.push(State.EMPTY_MAP);
         writer.write("{");
@@ -71,7 +71,7 @@ public class JsonWriter implements DataWriter {
      * @return {@inheritDoc}
      * @throws IOException {@inheritDoc}
      */
-    public JsonWriter closeMap() throws IOException {
+    public DataWriter closeMap() throws IOException {
         if (!stack.peek().isObject())
             throw new IllegalArgumentException("State is " + stack.peek() + ", expected " + State.MAP + " or " + State.EMPTY_MAP + "!");
         indent--;
@@ -90,7 +90,7 @@ public class JsonWriter implements DataWriter {
      * @return {@inheritDoc}
      * @throws IOException {@inheritDoc}
      */
-    public JsonWriter openList() throws IOException {
+    public DataWriter openList() throws IOException {
         beforeValue();
         stack.push(State.EMPTY_LIST);
         writer.write("[");
@@ -104,7 +104,7 @@ public class JsonWriter implements DataWriter {
      * @return {@inheritDoc}
      * @throws IOException {@inheritDoc}
      */
-    public JsonWriter closeList() throws IOException {
+    public DataWriter closeList() throws IOException {
         if (!stack.peek().isArray())
             throw new IllegalArgumentException("State is " + stack.peek() + ", expected " + State.LIST + " or " + State.EMPTY_LIST + "!");
         indent--;
@@ -124,7 +124,7 @@ public class JsonWriter implements DataWriter {
      * @return {@inheritDoc}
      * @throws IOException {@inheritDoc}
      */
-    public JsonWriter key(String key) throws IOException {
+    public DataWriter key(String key) throws IOException {
         beforeKey();
         stack.push(State.KEY);
         return string(key);
@@ -208,6 +208,17 @@ public class JsonWriter implements DataWriter {
         return this;
     }
 
+    @Override
+    public DataWriter value(Number number) throws IOException {
+        try {
+            long l = number.longValue();
+            return value(l);
+        } catch (NumberFormatException e) {
+            double d = number.doubleValue();
+            return value(d);
+        }
+    }
+
     /**
      * {@inheritDoc}
      *
@@ -215,12 +226,17 @@ public class JsonWriter implements DataWriter {
      * @return {@inheritDoc}
      * @throws IOException {@inheritDoc}
      */
-    public JsonWriter value(String string) throws IOException {
+    public DataWriter value(String string) throws IOException {
+        if (string == null) return nullValue();
         beforeValue();
-        if (string == null) {
-            throw new NullPointerException("string should not be null!");
-        }
         return string(string);
+    }
+
+    @Override
+    public DataWriter nullValue() throws IOException {
+        beforeValue();
+        writer.write("null");
+        return this;
     }
 
     private JsonWriter string(String string) throws IOException {
@@ -374,7 +390,7 @@ public class JsonWriter implements DataWriter {
 
     }
 
-    public enum State {
+    enum State {
         ROOT,
         LIST,
         EMPTY_LIST,
