@@ -19,14 +19,13 @@ public abstract class DataElement {
 
     public static class Type<T extends DataElement> {
 
+        public static final Type<DataNull> NULL_TYPE = new Type<>(reader -> DataNull.INSTANCE);
+
         public static final Type<DataMap> MAP_TYPE = new Type<>(DataMap::read);
         public static final Type<DataList> LIST_TYPE = new Type<>(DataList::read);
 
         public static final Type<DataBoolean> BOOLEAN_TYPE = new Type<>(DataBoolean::read);
-        public static final Type<DataInt> INT_TYPE = new Type<>(DataInt::read);
-        public static final Type<DataLong> LONG_TYPE = new Type<>(DataLong::read);
-        public static final Type<DataFloat> FLOAT_TYPE = new Type<>(DataFloat::read);
-        public static final Type<DataDouble> DOUBLE_TYPE = new Type<>(DataDouble::read);
+        public static final Type<DataNumber> NUMBER_TYPE = new Type<>(DataNumber::read);
         public static final Type<DataString> STRING_TYPE = new Type<>(DataString::read);
 
         private final CatchingFunction<DataReader, T, IOException> fromReader;
