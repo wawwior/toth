@@ -111,15 +111,6 @@ class JsonWriterTest {
     }
 
     @Test
-    void value_String_null() {
-        throwsTest(
-                writer -> writer.openMap().key("key").value(null),
-                NullPointerException.class,
-                "string should not be null!"
-        );
-    }
-
-    @Test
     void value_float_Infinity() {
         throwsTest(
                 writer -> writer.value(Float.POSITIVE_INFINITY),

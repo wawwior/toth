@@ -1,8 +1,8 @@
 package me.wawwior.toth.json;
 
+import me.wawwior.toth.data.primitives.DataNumber;
 import me.wawwior.toth.util.CatchingConsumer;
 import me.wawwior.toth.util.CatchingFunction;
-import me.wawwior.toth.util.Pair;
 import me.wawwior.toth.util.Streams;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -11,7 +11,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.io.StringReader;
-import java.io.StringWriter;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -50,15 +50,15 @@ class JsonReaderTest {
 
     @ParameterizedTest
     @MethodSource
-    void read_int_onRoot(String input, int expected) throws IOException {
+    void read_Number_onRoot(String input, Number expected) throws IOException {
         readTest(
-                JsonReader::readInteger,
+                JsonReader::readNumber,
                 input,
                 expected
         );
     }
 
-    static Stream<Arguments> read_int_onRoot() {
+    static Stream<Arguments> read_Number_onRoot() {
         return multiTestArgs(
                 //language=JSON
                 List.of(
@@ -67,51 +67,22 @@ class JsonReaderTest {
                         """
                         2147483647""",
                         """
-                        -2147483648"""
-                ),
-                List.of(0, Integer.MAX_VALUE, Integer.MIN_VALUE)
-        );
-    }
+                        -2147483648""",
 
-    @ParameterizedTest
-    @MethodSource
-    void read_long_onRoot(String input, long expected) throws IOException {
-        readTest(
-                JsonReader::readLong,
-                input,
-                expected
-        );
-    }
-
-    static Stream<Arguments> read_long_onRoot() {
-        return multiTestArgs(
-                //language=JSON
-                List.of(
                         """
                         0""",
                         """
                         9223372036854775807""",
                         """
-                        -9223372036854775808"""
-                ),
-                List.of(0, Long.MAX_VALUE, Long.MIN_VALUE)
-        );
-    }
+                        -9223372036854775808""",
 
-    @ParameterizedTest
-    @MethodSource
-    void read_float_onRoot(String input, float expected) throws IOException {
-        readTest(
-                JsonReader::readFloat,
-                input,
-                expected
-        );
-    }
+                        """
+                        0.0""",
+                        """
+                        3.4028235e38""",
+                        """
+                        1.4e-45""",
 
-    static Stream<Arguments> read_float_onRoot() {
-        return multiTestArgs(
-                //language=JSON
-                List.of(
                         """
                         0.0""",
                         """
@@ -119,32 +90,14 @@ class JsonReaderTest {
                         """
                         4.9e-324"""
                 ),
-                List.of(0, Float.MAX_VALUE, Float.MIN_VALUE)
-        );
-    }
-
-    @ParameterizedTest
-    @MethodSource
-    void read_double_onRoot(String input, double expected) throws IOException {
-        readTest(
-                JsonReader::readDouble,
-                input,
-                expected
-        );
-    }
-
-    static Stream<Arguments> read_double_onRoot() {
-        return multiTestArgs(
-                //language=JSON
-                List.of(
-                        """
-                        0.0""",
-                        """
-                        1.7976931348623157e308""",
-                        """
-                        4.9e-324"""
-                ),
-                List.of(0, Double.MAX_VALUE, Double.MIN_VALUE)
+                Stream.of(
+                        0, Integer.MAX_VALUE, Integer.MIN_VALUE,
+                        0, Long.MAX_VALUE, Long.MIN_VALUE,
+                        0, Float.MAX_VALUE, Float.MIN_VALUE,
+                        0, Double.MAX_VALUE, Double.MIN_VALUE
+                ).map(n ->
+                        new DataNumber.GenericNumber(n.toString())
+                ).toList()
         );
     }
 
@@ -235,7 +188,7 @@ class JsonReaderTest {
 
     @ParameterizedTest
     @MethodSource
-    void read_int_afterKey_inMap(String input, List<?> expected) throws IOException {
+    void read_Number_afterKey_inMap(String input, List<?> expected) throws IOException {
         listReadTest(
                 List.of(
                         reader -> {
@@ -243,7 +196,7 @@ class JsonReaderTest {
                             return reader.readKey();
                         },
                         reader -> {
-                            int b = reader.readInteger();
+                            Number b = reader.readNumber();
                             reader.leaveMap();
                             return b;
                         }
@@ -253,7 +206,7 @@ class JsonReaderTest {
         );
     }
 
-    static Stream<Arguments> read_int_afterKey_inMap() {
+    static Stream<Arguments> read_Number_afterKey_inMap() {
         return multiTestArgs(
                 //language=JSON
                 List.of(
@@ -262,7 +215,28 @@ class JsonReaderTest {
                         """
                         {"key":2147483647}""",
                         """
-                        {"key":-2147483648}"""
+                        {"key":-2147483648}""",
+
+                        """
+                        {"key":0}""",
+                        """
+                        {"key":9223372036854775807}""",
+                        """
+                        {"key":-9223372036854775808}""",
+
+                        """
+                        {"key":0.0}""",
+                        """
+                        {"key":3.4028235e38}""",
+                        """
+                        {"key":1.4e-45}""",
+
+                        """
+                        {"key":0.0}""",
+                        """
+                        {"key":3.4028235e38}""",
+                        """
+                        {"key":1.4e-45}"""
                 ),
                 //language=JSON
                 List.of(
@@ -277,49 +251,8 @@ class JsonReaderTest {
                         """
                         {
                           "key": -2147483648
-                        }"""
-                ),
-                List.of(
-                        List.of("key", 0),
-                        List.of("key", Integer.MAX_VALUE),
-                        List.of("key", Integer.MIN_VALUE)
-                )
-        );
-    }
+                        }""",
 
-    @ParameterizedTest
-    @MethodSource
-    void read_long_afterKey_inMap(String input, List<?> expected) throws IOException {
-        listReadTest(
-                List.of(
-                        reader -> {
-                            reader.enterMap();
-                            return reader.readKey();
-                        },
-                        reader -> {
-                            long b = reader.readLong();
-                            reader.leaveMap();
-                            return b;
-                        }
-                ),
-                input,
-                expected
-        );
-    }
-
-    static Stream<Arguments> read_long_afterKey_inMap() {
-        return multiTestArgs(
-                //language=JSON
-                List.of(
-                        """
-                        {"key":0}""",
-                        """
-                        {"key":9223372036854775807}""",
-                        """
-                        {"key":-9223372036854775808}"""
-                ),
-                //language=JSON
-                List.of(
                         """
                         {
                           "key": 0
@@ -331,117 +264,44 @@ class JsonReaderTest {
                         """
                         {
                           "key": -9223372036854775808
+                        }""",
+
+                        """
+                        {
+                          "key": 0.0
+                        }""",
+                        """
+                        {
+                          "key": 3.4028235e38
+                        }""",
+                        """
+                        {
+                          "key": 1.4e-45
+                        }""",
+
+                        """
+                        {
+                          "key": 0.0
+                        }""",
+                        """
+                        {
+                          "key": 3.4028235e38
+                        }""",
+                        """
+                        {
+                          "key": 1.4e-45
                         }"""
                 ),
                 List.of(
+                        List.of("key", 0),
+                        List.of("key", Integer.MAX_VALUE),
+                        List.of("key", Integer.MIN_VALUE),
                         List.of("key", 0),
                         List.of("key", Long.MAX_VALUE),
-                        List.of("key", Long.MIN_VALUE)
-                )
-        );
-    }
-
-    @ParameterizedTest
-    @MethodSource
-    void read_float_afterKey_inMap(String input, List<?> expected) throws IOException {
-        listReadTest(
-                List.of(
-                        reader -> {
-                            reader.enterMap();
-                            return reader.readKey();
-                        },
-                        reader -> {
-                            float b = reader.readFloat();
-                            reader.leaveMap();
-                            return b;
-                        }
-                ),
-                input,
-                expected
-        );
-    }
-
-    static Stream<Arguments> read_float_afterKey_inMap() {
-        return multiTestArgs(
-                //language=JSON
-                List.of(
-                        """
-                        {"key":0.0}""",
-                        """
-                        {"key":3.4028235e38}""",
-                        """
-                        {"key":1.4e-45}"""
-                ),
-                //language=JSON
-                List.of(
-                        """
-                        {
-                          "key": 0.0
-                        }""",
-                        """
-                        {
-                          "key": 3.4028235e38
-                        }""",
-                        """
-                        {
-                          "key": 1.4e-45
-                        }"""
-                ),
-                List.of(
+                        List.of("key", Long.MIN_VALUE),
                         List.of("key", 0),
                         List.of("key", Float.MAX_VALUE),
-                        List.of("key", Float.MIN_VALUE)
-                )
-        );
-    }
-
-    @ParameterizedTest
-    @MethodSource
-    void read_double_afterKey_inMap(String input, List<?> expected) throws IOException {
-        listReadTest(
-                List.of(
-                        reader -> {
-                            reader.enterMap();
-                            return reader.readKey();
-                        },
-                        reader -> {
-                            double b = reader.readDouble();
-                            reader.leaveMap();
-                            return b;
-                        }
-                ),
-                input,
-                expected
-        );
-    }
-
-    static Stream<Arguments> read_double_afterKey_inMap() {
-        return multiTestArgs(
-                //language=JSON
-                List.of(
-                        """
-                        {"key":0.0}""",
-                        """
-                        {"key":3.4028235e38}""",
-                        """
-                        {"key":1.4e-45}"""
-                ),
-                //language=JSON
-                List.of(
-                        """
-                        {
-                          "key": 0.0
-                        }""",
-                        """
-                        {
-                          "key": 3.4028235e38
-                        }""",
-                        """
-                        {
-                          "key": 1.4e-45
-                        }"""
-                ),
-                List.of(
+                        List.of("key", Float.MIN_VALUE),
                         List.of("key", 0),
                         List.of("key", Double.MAX_VALUE),
                         List.of("key", Double.MIN_VALUE)
