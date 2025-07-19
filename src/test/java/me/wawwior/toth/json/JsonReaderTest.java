@@ -11,7 +11,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.io.StringReader;
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -234,9 +233,9 @@ class JsonReaderTest {
                         """
                         {"key":0.0}""",
                         """
-                        {"key":3.4028235e38}""",
+                        {"key":1.7976931348623157e308}""",
                         """
-                        {"key":1.4e-45}"""
+                        {"key":4.9e-324}"""
                 ),
                 //language=JSON
                 List.of(
@@ -285,27 +284,25 @@ class JsonReaderTest {
                         }""",
                         """
                         {
-                          "key": 3.4028235e38
+                          "key": 1.7976931348623157e308
                         }""",
                         """
                         {
-                          "key": 1.4e-45
+                          "key": 4.9e-324
                         }"""
                 ),
-                List.of(
-                        List.of("key", 0),
-                        List.of("key", Integer.MAX_VALUE),
-                        List.of("key", Integer.MIN_VALUE),
-                        List.of("key", 0),
-                        List.of("key", Long.MAX_VALUE),
-                        List.of("key", Long.MIN_VALUE),
-                        List.of("key", 0),
-                        List.of("key", Float.MAX_VALUE),
-                        List.of("key", Float.MIN_VALUE),
-                        List.of("key", 0),
-                        List.of("key", Double.MAX_VALUE),
-                        List.of("key", Double.MIN_VALUE)
-                )
+                Streams.zip(
+                        Stream.generate(() -> "key"),
+                        Stream.of(
+                                0, Integer.MAX_VALUE, Integer.MIN_VALUE,
+                                0, Long.MAX_VALUE, Long.MIN_VALUE,
+                                0, Float.MAX_VALUE, Float.MIN_VALUE,
+                                0, Double.MAX_VALUE, Double.MIN_VALUE
+                        ).map(n ->
+                                                                    new DataNumber.GenericNumber(n.toString())
+                        ),
+                        List::of
+                ).toList()
         );
     }
 
@@ -739,7 +736,7 @@ class JsonReaderTest {
     /**
      * Utility method for creating tests.
      *
-     * @param consumer the write operation
+     * @param consumer the read operation
      * @param expected the expected exception
      */
     <T extends Exception> void throwsTest(CatchingConsumer<JsonReader, IOException> consumer,  String input, Class<T> exceptionType, String expected) {

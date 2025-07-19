@@ -8,11 +8,28 @@ import me.wawwior.toth.util.CatchingFunction;
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.Stack;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class JsonReader implements DataReader {
 
     private final StringReader reader;
     private final Stack<State> stack = new Stack<>();
+
+    static final Pattern numberPattern = Pattern.compile("-?([1-9]\\d*|0)(.\\d+)?([Ee][+-]?\\d+)?");
+
+    private static final char[] ESCAPES = new char[117];
+
+    static {
+        ESCAPES['"'] = '"';
+        ESCAPES['\\'] = '\\';
+
+        ESCAPES['b'] = '\b';
+        ESCAPES['f'] = '\f';
+        ESCAPES['n'] = '\n';
+        ESCAPES['r'] = '\r';
+        ESCAPES['t'] = '\t';
+    }
 
     public JsonReader(StringReader reader) {
         this.reader = reader;
@@ -28,8 +45,7 @@ public class JsonReader implements DataReader {
 
     @Override
     public void leaveMap() throws IOException {
-        // TODO: Exception
-        if (!stack.peek().isMap()) throw new IOException();
+        if (!stack.peek().isMap()) throw new IOException("State is " + stack.peek() + ", expected MAP or EMPTY_MAP!");
         skipWhitespace();
         expect('}');
         stack.pop();
@@ -44,8 +60,7 @@ public class JsonReader implements DataReader {
 
     @Override
     public void leaveList() throws IOException {
-        // TODO: Exception
-        if (!stack.peek().isList()) throw new IOException();
+        if (!stack.peek().isList()) throw new IOException("State is " + stack.peek() + ", expected LIST or EMPTY_LIST!");
         skipWhitespace();
         expect(']');
         stack.pop();
@@ -53,7 +68,9 @@ public class JsonReader implements DataReader {
 
     @Override
     public String readKey() throws IOException {
-        return "";
+        beforeKey();
+        stack.push(State.KEY);
+        return consumeString();
     }
 
     @Override
@@ -63,8 +80,7 @@ public class JsonReader implements DataReader {
         if (value.equals("true") || value.equals("false")) {
             return value.equals("true");
         }
-        // TODO: Exception
-        throw new IOException();
+        throw new IOException("Expected boolean, found \"" + value + "\"!");
     }
 
     @Override
@@ -100,22 +116,47 @@ public class JsonReader implements DataReader {
 
     @Override
     public String readString() throws IOException {
-        return "";
+        beforeValue();
+        return consumeString();
     }
 
     @Override
     public boolean hasNext() throws IOException {
-        // TODO: Exception
-        if (stack.peek() == State.KEY) throw new IOException();
+        if (stack.peek() == State.KEY) throw new IOException("Cannot determine next while state is KEY!");
         skipWhitespace();
         reader.mark(0);
         char c = (char) reader.read();
+        reader.reset();
         return c == ',';
     }
 
     @Override
     public DataElement.Type<?> nextType() throws IOException {
-        return null;
+        skipWhitespace();
+
+        String bracket = peekUntilInclude("[{");
+        if (bracket.equals("[")) {
+            return DataElement.Type.LIST_TYPE;
+        }
+        if (bracket.equals("{")) {
+            return DataElement.Type.MAP_TYPE;
+        }
+
+        String nonStringValue = peekNonString();
+        if (nonStringValue.equals("true") || nonStringValue.equals("false")) {
+            return DataElement.Type.BOOLEAN_TYPE;
+        }
+        if (nonStringValue.equals("null")) {
+            return DataElement.Type.NULL_TYPE;
+        }
+
+        Matcher numberMatcher = numberPattern.matcher(nonStringValue);
+        if (numberMatcher.matches()) {
+            return DataElement.Type.NUMBER_TYPE;
+        }
+
+        String ignored = peekString();
+        return DataElement.Type.STRING_TYPE;
     }
 
     void expect(char c) throws IOException {
@@ -142,8 +183,7 @@ public class JsonReader implements DataReader {
                 stack.pop();
                 stack.push(State.LIST);
             }
-            // TODO: Exception
-            case MAP, EMPTY_MAP, CLOSED -> throw new IOException();
+            case MAP, EMPTY_MAP, CLOSED -> throw new IOException("Cannot read value when state is " + stack.peek() + "!");
         }
     }
 
@@ -158,11 +198,16 @@ public class JsonReader implements DataReader {
                 stack.pop();
                 stack.push(State.MAP);
             }
-            // TODO: Exception
-            case KEY, LIST, EMPTY_LIST, ROOT, CLOSED -> throw new IOException();
+            case KEY, LIST, EMPTY_LIST, ROOT, CLOSED -> throw new IOException("Cannot read key when state is " + stack.peek() + "!");
         }
     }
 
+    /**
+     * Consumes reader until non-whitespace is encountered.
+     * skipWhitespace^n for n > 0 is equal to skipWhitespace.
+     * skipWhitespace should be non-interfering, as in no other method should rely on skipWhitespace not being called.
+     * @throws IOException propagated from the reader.
+     */
     void skipWhitespace() throws IOException {
         while (true) {
             reader.mark(0);
@@ -174,17 +219,16 @@ public class JsonReader implements DataReader {
         }
     }
 
-    String readInclusiveUntil(String terminators, boolean consuming) throws IOException {
+    String peekUntilInclude(String terminators) throws IOException {
         StringBuilder builder = new StringBuilder();
-        if (!consuming) reader.mark(0);
+        reader.mark(0);
         while (true) {
             int c = reader.read();
+            if (c == -1) break;
             builder.append((char) c);
-            if (c == -1 || terminators.indexOf(c) != -1) {
-                break;
-            }
+            if (terminators.indexOf(c) != -1) break;
         }
-        if (!consuming) reader.reset();
+        reader.reset();
         return builder.toString();
     }
 
@@ -204,6 +248,38 @@ public class JsonReader implements DataReader {
         return peekUntil(" \n\r\t,}]");
     }
 
+    String peekString() throws IOException {
+        StringBuilder builder = new StringBuilder();
+        reader.mark(0);
+        boolean escaped = false;
+        String quote = peekUntilInclude("\"'");
+        if (quote.length() > 1) {
+            throw new IOException("Could not find quotation mark!");
+        }
+        char quote_char = quote.charAt(0);
+        long ignored = reader.skip(1);
+        while (true) {
+            int c = reader.read();
+            if (c == -1) throw new IOException("Expected quotation mark, found EOF!");
+            if (!escaped) {
+                if (c == quote_char) break;
+                if (c == '\\') {
+                    escaped = true;
+                    continue;
+                }
+                builder.append((char) c);
+            } else {
+                escaped = false;
+                if (c > 116) throw new IOException("char '" + (char) c + "' cannot be escaped!");
+                char replacement = ESCAPES[c];
+                if (replacement == 0) throw new IOException("char '" + (char) c + "' cannot be escaped!");
+                builder.append(replacement);
+            }
+        }
+        reader.reset();
+        return builder.toString();
+    }
+
     String consumeUntil(String terminators) throws IOException {
         StringBuilder builder = new StringBuilder();
         while (true) {
@@ -216,8 +292,48 @@ public class JsonReader implements DataReader {
         return builder.toString();
     }
 
+    String consumeUntilInclude(String terminators) throws IOException {
+        StringBuilder builder = new StringBuilder();
+        while (true) {
+            int c = reader.read();
+            if (c == -1) break;
+            builder.append((char) c);
+            if (terminators.indexOf(c) != -1) break;
+        }
+        return builder.toString();
+    }
+
     String consumeNonString() throws IOException {
         return consumeUntil(" \n\r\t,}]");
+    }
+
+    String consumeString() throws IOException {
+        StringBuilder builder = new StringBuilder();
+        boolean escaped = false;
+        String quote = consumeUntilInclude("\"'");
+        if (quote.length() > 1) {
+            throw new IOException("Could not find quotation mark!");
+        }
+        char quote_char = quote.charAt(0);
+        while (true) {
+            int c = reader.read();
+            if (c == -1) throw new IOException("Expected quotation mark, found EOF!");
+            if (!escaped) {
+                if (c == quote_char) break;
+                if (c == '\\') {
+                    escaped = true;
+                    continue;
+                }
+                builder.append((char) c);
+            } else {
+                escaped = false;
+                if (c > 116) throw new IOException("char '" + (char) c + "' cannot be escaped!");
+                char replacement = ESCAPES[c];
+                if (replacement == 0) throw new IOException("char '" + (char) c + "' cannot be escaped!");
+                builder.append(replacement);
+            }
+        }
+        return builder.toString();
     }
 
     enum State {
