@@ -5,7 +5,7 @@ import me.wawwior.toth.data.DataElement;
 
 import java.io.IOException;
 
-public class DataNull extends DataElement {
+public final class DataNull extends DataElement {
 
     public static DataNull INSTANCE = new DataNull();
 

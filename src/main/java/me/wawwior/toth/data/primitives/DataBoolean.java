@@ -7,7 +7,7 @@ import me.wawwior.toth.data.DataMap;
 
 import java.io.IOException;
 
-public class DataBoolean extends DataElement {
+public final class DataBoolean extends DataElement {
 
     private final boolean value;
 

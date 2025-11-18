@@ -16,6 +16,8 @@ public interface DataReader {
 
     String readKey() throws IOException;
 
+    void expectNull() throws IOException;
+
     boolean readBoolean() throws IOException;
 
     int readInt() throws IOException;

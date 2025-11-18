@@ -1,19 +1,27 @@
 package me.wawwior.toth.data;
 
-import com.google.gson.stream.JsonReader;
 import me.wawwior.toth.DataReader;
 import me.wawwior.toth.DataWriter;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
-public class DataMap extends DataElement {
+public final class DataMap extends DataElement {
 
-    private final Map<String, DataElement> elements = new HashMap<>();
+    private final Map<String, DataElement> elements = new LinkedHashMap<>();
 
-    public DataElement get(String key) {
-        return elements.get(key);
+    public Optional<DataElement> get(String key) {
+        return Optional.ofNullable(elements.get(key));
+    }
+
+    public <T extends DataElement> Optional<T> getAs(String key, Type<T> type) {
+        return Optional.ofNullable(elements.get(key)).flatMap(element -> {
+            try {
+                return Optional.of(type.cast(element));
+            } catch (IllegalArgumentException ignored) {
+                return Optional.empty();
+            }
+        });
     }
 
     public void put(String key, DataElement element) {
@@ -27,7 +35,11 @@ public class DataMap extends DataElement {
     public static DataMap read(DataReader reader) throws IOException {
         DataMap map = new DataMap();
         reader.enterMap();
-        while (reader.hasNext()) map.put(reader.readKey(), reader.nextType().read(reader));
+        while (reader.hasNext()) {
+            String key = reader.readKey();
+            Type<?> type = reader.nextType();
+            map.put(key, type.read(reader));
+        }
         reader.leaveMap();
         return map;
     }

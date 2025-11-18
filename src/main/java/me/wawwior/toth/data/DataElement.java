@@ -17,20 +17,29 @@ public abstract class DataElement {
         return type.cast(this);
     }
 
-    public static class Type<T extends DataElement> {
+    public static DataElement read(DataReader reader) throws IOException {
+        return reader.nextType().read(reader);
+    }
 
-        public static final Type<DataNull> NULL_TYPE = new Type<>(reader -> DataNull.INSTANCE);
+    public static final class Type<T extends DataElement> {
 
-        public static final Type<DataMap> MAP_TYPE = new Type<>(DataMap::read);
-        public static final Type<DataList> LIST_TYPE = new Type<>(DataList::read);
+        public static final Type<DataNull> NULL_TYPE = new Type<>("null", reader -> {
+            reader.expectNull();
+            return DataNull.INSTANCE;
+        });
 
-        public static final Type<DataBoolean> BOOLEAN_TYPE = new Type<>(DataBoolean::read);
-        public static final Type<DataNumber> NUMBER_TYPE = new Type<>(DataNumber::read);
-        public static final Type<DataString> STRING_TYPE = new Type<>(DataString::read);
+        public static final Type<DataMap> MAP_TYPE = new Type<>("map", DataMap::read);
+        public static final Type<DataList> LIST_TYPE = new Type<>("list", DataList::read);
 
+        public static final Type<DataBoolean> BOOLEAN_TYPE = new Type<>("boolean", DataBoolean::read);
+        public static final Type<DataNumber> NUMBER_TYPE = new Type<>("number", DataNumber::read);
+        public static final Type<DataString> STRING_TYPE = new Type<>("string", DataString::read);
+
+        private final String name;
         private final CatchingFunction<DataReader, T, IOException> fromReader;
 
-        private Type(CatchingFunction<DataReader, T, IOException> fromReader) {
+        private Type(String name, CatchingFunction<DataReader, T, IOException> fromReader) {
+            this.name = name;
             this.fromReader = fromReader;
         }
 
@@ -46,6 +55,10 @@ public abstract class DataElement {
             return fromReader.apply(reader);
         }
 
+        @Override
+        public String toString() {
+            return "Type[" + name + "]";
+        }
     }
 
 }

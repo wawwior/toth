@@ -26,7 +26,7 @@ public class JsonWriter implements DataWriter {
     private final String comma;
     private final String colon;
 
-    private final Stack<State> stack = new Stack<>();
+    private final Stack<JsonLocation> stack = new Stack<>();
     private int indent = 0;
 
     /**
@@ -48,7 +48,7 @@ public class JsonWriter implements DataWriter {
         } else {
             comma = ",";
         }
-        stack.push(State.ROOT);
+        stack.push(JsonLocation.ROOT);
     }
 
     /**
@@ -59,7 +59,7 @@ public class JsonWriter implements DataWriter {
      */
     public DataWriter openMap() throws IOException {
         beforeValue();
-        stack.push(State.EMPTY_MAP);
+        stack.push(JsonLocation.EMPTY_MAP);
         writer.write("{");
         indent++;
         return this;
@@ -72,10 +72,10 @@ public class JsonWriter implements DataWriter {
      * @throws IOException {@inheritDoc}
      */
     public DataWriter closeMap() throws IOException {
-        if (!stack.peek().isObject())
-            throw new IllegalArgumentException("State is " + stack.peek() + ", expected " + State.MAP + " or " + State.EMPTY_MAP + "!");
+        if (!stack.peek().isMap())
+            throw new IllegalArgumentException("State is " + stack.peek() + ", expected " + JsonLocation.MAP + " or " + JsonLocation.EMPTY_MAP + "!");
         indent--;
-        if (stack.peek() == State.MAP) {
+        if (stack.peek() == JsonLocation.MAP) {
             writeNewline();
             writeIndent();
         }
@@ -92,7 +92,7 @@ public class JsonWriter implements DataWriter {
      */
     public DataWriter openList() throws IOException {
         beforeValue();
-        stack.push(State.EMPTY_LIST);
+        stack.push(JsonLocation.EMPTY_LIST);
         writer.write("[");
         indent++;
         return this;
@@ -105,10 +105,10 @@ public class JsonWriter implements DataWriter {
      * @throws IOException {@inheritDoc}
      */
     public DataWriter closeList() throws IOException {
-        if (!stack.peek().isArray())
-            throw new IllegalArgumentException("State is " + stack.peek() + ", expected " + State.LIST + " or " + State.EMPTY_LIST + "!");
+        if (!stack.peek().isList())
+            throw new IllegalArgumentException("State is " + stack.peek() + ", expected " + JsonLocation.LIST + " or " + JsonLocation.EMPTY_LIST + "!");
         indent--;
-        if (stack.peek() == State.LIST) {
+        if (stack.peek() == JsonLocation.LIST) {
             writeNewline();
             writeIndent();
         }
@@ -126,7 +126,7 @@ public class JsonWriter implements DataWriter {
      */
     public DataWriter key(String key) throws IOException {
         beforeKey();
-        stack.push(State.KEY);
+        stack.push(JsonLocation.KEY);
         return string(key);
     }
 
@@ -295,23 +295,23 @@ public class JsonWriter implements DataWriter {
                 updateScope();
             }
             case KEY, LIST, EMPTY_LIST, ROOT, CLOSED ->
-                    throw new IllegalArgumentException("State is " + stack.peek() + ", expected " + State.MAP + "!");
+                    throw new IllegalArgumentException("State is " + stack.peek() + ", expected " + JsonLocation.MAP + "!");
         }
     }
 
     private void updateScope() {
-        if (stack.peek().isArray()) {
+        if (stack.peek().isList()) {
             stack.pop();
-            stack.push(State.LIST);
+            stack.push(JsonLocation.LIST);
             return;
         }
-        if (stack.peek().isObject()) {
+        if (stack.peek().isMap()) {
             stack.pop();
-            stack.push(State.MAP);
+            stack.push(JsonLocation.MAP);
         }
-        if (stack.peek() == State.ROOT) {
+        if (stack.peek() == JsonLocation.ROOT) {
             stack.pop();
-            stack.push(State.CLOSED);
+            stack.push(JsonLocation.CLOSED);
         }
     }
 
@@ -388,23 +388,5 @@ public class JsonWriter implements DataWriter {
 
         boolean spaces();
 
-    }
-
-    enum State {
-        ROOT,
-        LIST,
-        EMPTY_LIST,
-        MAP,
-        EMPTY_MAP,
-        KEY,
-        CLOSED;
-
-        public boolean isObject() {
-            return this == MAP || this == EMPTY_MAP;
-        }
-
-        public boolean isArray() {
-            return this == LIST || this == EMPTY_LIST;
-        }
     }
 }

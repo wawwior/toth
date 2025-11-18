@@ -7,10 +7,9 @@ import me.wawwior.toth.util.Suppliers;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.util.Objects;
 import java.util.function.Supplier;
 
-public class DataNumber extends DataElement {
+public final class DataNumber extends DataElement {
 
     private final Number value;
 
@@ -20,6 +19,22 @@ public class DataNumber extends DataElement {
 
     public static DataNumber read(DataReader reader) throws IOException {
         return new DataNumber(reader.readNumber());
+    }
+
+    public int asInt() {
+        return value.intValue();
+    }
+
+    public long asLong() {
+        return value.longValue();
+    }
+
+    public float asFloat() {
+        return value.floatValue();
+    }
+
+    public double asDouble() {
+        return value.doubleValue();
     }
 
     @Override
@@ -37,30 +52,38 @@ public class DataNumber extends DataElement {
         private final String value;
 
         private final Supplier<BigDecimal> bigDecimal;
+        private final Supplier<Integer> intValue;
+        private final Supplier<Long> longValue;
+        private final Supplier<Float> floatValue;
+        private final Supplier<Double> doubleValue;
 
         public GenericNumber(String value) {
             this.value = value;
             this.bigDecimal = Suppliers.memoize(() -> new BigDecimal(value));
+            this.intValue = Suppliers.memoize(() -> Integer.parseInt(value));
+            this.longValue = Suppliers.memoize(() -> Long.parseLong(value));
+            this.floatValue = Suppliers.memoize(() -> Float.parseFloat(value));
+            this.doubleValue = Suppliers.memoize(() -> Double.parseDouble(value));
         }
 
         @Override
         public int intValue() {
-            return Integer.parseInt(value);
+            return intValue.get();
         }
 
         @Override
         public long longValue() {
-            return Long.parseLong(value);
+            return longValue.get();
         }
 
         @Override
         public float floatValue() {
-            return Float.parseFloat(value);
+            return floatValue.get();
         }
 
         @Override
         public double doubleValue() {
-            return Double.parseDouble(value);
+            return doubleValue.get();
         }
 
         @Override

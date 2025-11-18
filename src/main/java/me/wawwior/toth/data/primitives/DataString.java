@@ -7,7 +7,7 @@ import me.wawwior.toth.data.DataMap;
 
 import java.io.IOException;
 
-public class DataString extends DataElement {
+public final class DataString extends DataElement {
 
     private final String value;
 
