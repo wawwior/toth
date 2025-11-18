@@ -1,19 +1,24 @@
 package me.wawwior.toth.data;
 
-import com.google.gson.JsonElement;
 import me.wawwior.toth.DataReader;
 import me.wawwior.toth.DataWriter;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 
-public class DataList extends DataElement {
+public class DataList extends DataElement implements Iterable<DataElement> {
 
     private final List<DataElement> elements = new ArrayList<>();
 
-    public DataElement get(int index) {
-        return elements.get(index);
+    public Optional<DataElement> get(int index) {
+        try {
+            return Optional.of(elements.get(index));
+        } catch (IndexOutOfBoundsException ignored) {
+            return Optional.empty();
+        }
     }
 
     public void set(int index, DataElement element) {
@@ -26,6 +31,15 @@ public class DataList extends DataElement {
 
     public void remove(int index) {
         elements.remove(index);
+    }
+
+    public int size() {
+        return elements.size();
+    }
+
+    @Override
+    public Iterator<DataElement> iterator() {
+        return elements.iterator();
     }
 
     public static DataList read(DataReader reader) throws IOException {
