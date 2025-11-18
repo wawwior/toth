@@ -4,13 +4,13 @@ import me.wawwior.toth.data.primitives.DataNumber;
 import me.wawwior.toth.util.CatchingConsumer;
 import me.wawwior.toth.util.CatchingFunction;
 import me.wawwior.toth.util.Streams;
+import me.wawwior.toth.util.StringCursor;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
-import java.io.StringReader;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -641,8 +641,8 @@ class JsonReaderTest {
             List<CatchingConsumer<JsonReader, IOException>> steps,
             String input
     ) throws IOException {
-        StringReader stringReader = new StringReader(input);
-        JsonReader reader = new JsonReader(stringReader);
+        StringCursor cursor = new StringCursor(input);
+        JsonReader reader = new JsonReader(cursor);
         Streams.catchingForEach(steps, step -> step.accept(reader), IOException.class);
     }
 
@@ -650,8 +650,8 @@ class JsonReaderTest {
             CatchingConsumer<JsonReader, IOException> step,
             String input
     ) throws IOException {
-        StringReader stringReader = new StringReader(input);
-        JsonReader reader = new JsonReader(stringReader);
+        StringCursor cursor = new StringCursor(input);
+        JsonReader reader = new JsonReader(cursor);
         step.accept(reader);
     }
     
@@ -740,10 +740,10 @@ class JsonReaderTest {
      * @param expected the expected exception
      */
     <T extends Exception> void throwsTest(CatchingConsumer<JsonReader, IOException> consumer,  String input, Class<T> exceptionType, String expected) {
-        StringReader stringReader = new StringReader(input);
+        StringCursor cursor = new StringCursor(input);
         T exception = assertThrows(
                 exceptionType,
-                () -> consumer.accept(new JsonReader(stringReader))
+                () -> consumer.accept(new JsonReader(cursor))
         );
         assertEquals(expected, exception.getMessage());
     }
