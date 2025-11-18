@@ -1,19 +1,17 @@
 package me.wawwior.toth.data;
 
-import com.google.gson.stream.JsonReader;
 import me.wawwior.toth.DataReader;
 import me.wawwior.toth.DataWriter;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class DataMap extends DataElement {
 
-    private final Map<String, DataElement> elements = new HashMap<>();
+    private final Map<String, DataElement> elements = new LinkedHashMap<>();
 
-    public DataElement get(String key) {
-        return elements.get(key);
+    public Optional<DataElement> get(String key) {
+        return Optional.ofNullable(elements.get(key));
     }
 
     public void put(String key, DataElement element) {
@@ -27,7 +25,10 @@ public class DataMap extends DataElement {
     public static DataMap read(DataReader reader) throws IOException {
         DataMap map = new DataMap();
         reader.enterMap();
-        while (reader.hasNext()) map.put(reader.readKey(), reader.nextType().read(reader));
+        while (reader.hasNext()) {
+            String key = reader.readKey();
+            map.put(key, DataElement.read(reader));
+        }
         reader.leaveMap();
         return map;
     }
