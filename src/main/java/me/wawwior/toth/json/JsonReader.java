@@ -74,6 +74,13 @@ public class JsonReader implements DataReader {
     }
 
     @Override
+    public void expectNull() throws IOException {
+        beforeValue(cursor);
+        String value = readUnquotedValue(cursor);
+        if (!value.equals("null")) throw new IOException("Expected null, found \"" + value + "\"!");
+    }
+
+    @Override
     public boolean readBoolean() throws IOException {
         beforeValue();
         String value = consumeNonString();
