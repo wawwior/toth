@@ -17,6 +17,10 @@ public abstract class DataElement {
         return type.cast(this);
     }
 
+    public static DataElement read(DataReader reader) throws IOException {
+        return reader.nextType().read(reader);
+    }
+
     public static class Type<T extends DataElement> {
 
         public static final Type<DataNull> NULL_TYPE = new Type<>("null_type", reader -> {
