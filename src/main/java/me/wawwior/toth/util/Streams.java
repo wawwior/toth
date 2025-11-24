@@ -7,7 +7,9 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-public class Streams {
+public final class Streams {
+
+    private Streams() {}
 
     public static <A, B, C> Stream<C> zip(Stream<A> aStream, Stream<B> bStream, BiFunction<A, B, C> zipper) {
         final Iterator<A> aIterator = aStream.iterator();
