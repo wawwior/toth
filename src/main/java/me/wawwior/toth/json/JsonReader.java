@@ -234,13 +234,13 @@ public class JsonReader implements DataReader {
      * skipWhitespace is idempotent.
      * skipWhitespace should be non-interfering, as in no other method should rely on skipWhitespace not being called.
      */
-    private void skipWhitespace(StringCursor cursor) {
+    private void skipWhitespace(StringCursor cursor) throws IOException {
         while (cursor.peek().readChar().filter(c -> " \n\r\t".indexOf(c) == -1).isEmpty()) {
             cursor.readChar();
         }
     }
 
-    private String readUnquotedValue(StringCursor cursor) {
+    private String readUnquotedValue(StringCursor cursor) throws IOException {
         return cursor.readUntil(" \n\r\t,}]", false);
     }
 

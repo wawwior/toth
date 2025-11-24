@@ -11,6 +11,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
+import java.io.StringReader;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -641,7 +642,7 @@ class JsonReaderTest {
             List<CatchingConsumer<JsonReader, IOException>> steps,
             String input
     ) throws IOException {
-        StringCursor cursor = new StringCursor(input);
+        StringCursor cursor = StringCursor.of(new StringReader(input));
         JsonReader reader = new JsonReader(cursor);
         Streams.catchingForEach(steps, step -> step.accept(reader), IOException.class);
     }
@@ -650,7 +651,7 @@ class JsonReaderTest {
             CatchingConsumer<JsonReader, IOException> step,
             String input
     ) throws IOException {
-        StringCursor cursor = new StringCursor(input);
+        StringCursor cursor = StringCursor.of(new StringReader(input));
         JsonReader reader = new JsonReader(cursor);
         step.accept(reader);
     }
@@ -740,7 +741,7 @@ class JsonReaderTest {
      * @param expected the expected exception
      */
     <T extends Exception> void throwsTest(CatchingConsumer<JsonReader, IOException> consumer,  String input, Class<T> exceptionType, String expected) {
-        StringCursor cursor = new StringCursor(input);
+        StringCursor cursor = StringCursor.of(new StringReader(input));
         T exception = assertThrows(
                 exceptionType,
                 () -> consumer.accept(new JsonReader(cursor))

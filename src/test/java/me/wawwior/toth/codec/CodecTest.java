@@ -33,7 +33,7 @@ class CodecTest {
 
         System.out.println(stringWriter);
 
-        StringCursor stringCursor = new StringCursor(stringWriter.toString());
+        StringCursor stringCursor = StringCursor.of(stringWriter.toString());
         JsonReader jsonReader = new JsonReader(stringCursor);
 
         DataMap readMap = DataMap.read(jsonReader);
