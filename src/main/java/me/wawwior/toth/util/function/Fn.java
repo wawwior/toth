@@ -27,14 +27,12 @@ public interface Fn<A, B> extends Mor<Fn._Cat, A, B> {
 
         @Override
         public <A, B, C> Fn<A, C> compose(Mor<Fn._Cat, A, B> f, Mor<Fn._Cat, B, C> g) {
-            Fn<A, B> fn1 = (Fn<A, B>) f;
-            Fn<B, C> fn2 = (Fn<B, C>) g;
-            return a -> fn2.apply(fn1.apply(a));
+            return a -> unbox(g).apply(unbox(f).apply(a));
         }
 
         @Override
         public <A, B, C> Fn<B, Fn<A, C>> flip(Mor<Fn._Cat, A, Mor<Fn._Cat, B, C>> mor) {
-            return null;
+            return b -> a -> unbox(unbox(mor).apply(a)).apply(b);
         }
 
         @Override
